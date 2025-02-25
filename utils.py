@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 def calculate_metrics(results):
     """Calculate performance metrics"""
@@ -34,6 +35,32 @@ def calculate_metrics(results):
         'win_rate': win_rate,
         'volatility': daily_vol * 100
     }
+
+def plot_drawdown(results):
+    """Plot drawdown over time"""
+    rolling_max = results['portfolio_value'].cummax()
+    drawdowns = (results['portfolio_value'] - rolling_max) / rolling_max * 100
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=results.index,
+        y=drawdowns,
+        fill='tozeroy',
+        name='Drawdown',
+        line=dict(color='red')
+    ))
+
+    fig.update_layout(
+        title='Portfolio Drawdown',
+        xaxis_title='Date',
+        yaxis_title='Drawdown (%)',
+        template='plotly_white',
+        showlegend=True,
+        yaxis=dict(tickformat='.1f')
+    )
+
+    return fig
 
 def plot_equity_curve(results):
     """Plot equity curve"""
@@ -71,67 +98,100 @@ def plot_equity_curve(results):
 
 def plot_trades(data, results):
     """Plot trading signals"""
-    fig = go.Figure()
+    # Create figure with secondary y-axis
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
 
     # Plot price
-    fig.add_trace(go.Scatter(
-        x=data.index,
-        y=data['Close'],
-        mode='lines',
-        name='Close Price',
-        line=dict(color='#666666')
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=data.index,
+            y=data['Close'],
+            mode='lines',
+            name='Close Price',
+            line=dict(color='#666666')
+        ),
+        secondary_y=False
+    )
 
     # Plot moving averages
-    fig.add_trace(go.Scatter(
-        x=results.index,
-        y=results['SMA_short'],
-        mode='lines',
-        name=f'{results.SMA_short.name} MA',
-        line=dict(color='#17a2b8')
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=results.index,
+            y=results['SMA_short'],
+            mode='lines',
+            name=f'{results.SMA_short.name} MA',
+            line=dict(color='#17a2b8')
+        ),
+        secondary_y=False
+    )
 
-    fig.add_trace(go.Scatter(
-        x=results.index,
-        y=results['SMA_long'],
-        mode='lines',
-        name=f'{results.SMA_long.name} MA',
-        line=dict(color='#28a745')
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=results.index,
+            y=results['SMA_long'],
+            mode='lines',
+            name=f'{results.SMA_long.name} MA',
+            line=dict(color='#28a745')
+        ),
+        secondary_y=False
+    )
 
     # Plot buy signals
     buy_signals = results[results['trade'] > 0]
-    fig.add_trace(go.Scatter(
-        x=buy_signals.index,
-        y=buy_signals['Close'],
-        mode='markers',
-        name='Buy',
-        marker=dict(
-            color='green',
-            size=10,
-            symbol='triangle-up'
-        )
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=buy_signals.index,
+            y=buy_signals['Close'],
+            mode='markers',
+            name='Buy',
+            marker=dict(
+                color='green',
+                size=10,
+                symbol='triangle-up'
+            )
+        ),
+        secondary_y=False
+    )
 
     # Plot sell signals
     sell_signals = results[results['trade'] < 0]
-    fig.add_trace(go.Scatter(
-        x=sell_signals.index,
-        y=sell_signals['Close'],
-        mode='markers',
-        name='Sell',
-        marker=dict(
-            color='red',
-            size=10,
-            symbol='triangle-down'
-        )
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=sell_signals.index,
+            y=sell_signals['Close'],
+            mode='markers',
+            name='Sell',
+            marker=dict(
+                color='red',
+                size=10,
+                symbol='triangle-down'
+            )
+        ),
+        secondary_y=False
+    )
+
+    # Add MA difference percentage on secondary y-axis
+    fig.add_trace(
+        go.Scatter(
+            x=results.index,
+            y=results['ma_diff_pct'],
+            mode='lines',
+            name='MA Difference %',
+            line=dict(color='#ffc107', dash='dot'),
+            opacity=0.5
+        ),
+        secondary_y=True
+    )
 
     fig.update_layout(
         title='Trading Signals',
         xaxis_title='Date',
-        yaxis_title='Price ($)',
-        template='plotly_white'
+        template='plotly_white',
+        height=600
     )
+
+    # Update y-axes labels
+    fig.update_yaxes(title_text="Price ($)", secondary_y=False)
+    fig.update_yaxes(title_text="MA Difference (%)", secondary_y=True)
 
     return fig

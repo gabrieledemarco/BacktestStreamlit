@@ -22,11 +22,12 @@ class Backtester:
 
         # Process trades sequentially
         for i in range(1, len(df)):
-            current_price = df['Close'].iloc[i]
+            current_price = float(df['Close'].iloc[i])
+            trade_signal = float(df['trade'].iloc[i])
 
             # Calculate shares for new positions
-            if abs(df['trade'].iloc[i]) > 0:
-                if df['trade'].iloc[i] > 0:  # Buy
+            if abs(trade_signal) > 0:
+                if trade_signal > 0:  # Buy
                     new_shares = np.floor(position_size / current_price)
                     df.iloc[i, df.columns.get_loc('shares')] = new_shares
                     df.iloc[i, df.columns.get_loc('cash')] = df['cash'].iloc[i-1] - (new_shares * current_price)
