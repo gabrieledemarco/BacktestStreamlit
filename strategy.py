@@ -14,29 +14,27 @@ class MovingAverageCrossover:
         df['SMA_short'] = df['Close'].rolling(window=self.short_window).mean()
         df['SMA_long'] = df['Close'].rolling(window=self.long_window).mean()
 
-        # Calculate percentage difference between MAs
+        # Initialize signals
+        df['signal'] = 0
         df['ma_diff_pct'] = (df['SMA_short'] - df['SMA_long']) / df['SMA_long'] * 100
 
         # Generate signals using vectorized operations
-        df['signal'] = 0
-        mask = (df['SMA_short'].notna()) & (df['SMA_long'].notna())
-        df.loc[mask & (df['ma_diff_pct'] > 0.5), 'signal'] = 1
-        df.loc[mask & (df['ma_diff_pct'] < -0.5), 'signal'] = -1
+        df.loc[df['ma_diff_pct'] > 0.5, 'signal'] = 1
+        df.loc[df['ma_diff_pct'] < -0.5, 'signal'] = -1
 
-        # Generate trades (signal changes only)
-        df['trade'] = df['signal'].diff()
+        # Generate trades
+        df['trade'] = df['signal'].diff().fillna(0)
 
-        # Apply minimum holding period
+        # Filter out trades during minimum holding period
         min_hold_period = 20
-        last_trade_index = None
-        df['trade'] = df['trade'].fillna(0)
+        last_trade_idx = -1
 
-        for idx in df.index:
-            if df.loc[idx, 'trade'] != 0:
-                if last_trade_index is not None and (df.index.get_loc(idx) - df.index.get_loc(last_trade_index)) < min_hold_period:
-                    df.loc[idx, 'trade'] = 0
-                    df.loc[idx, 'signal'] = df.loc[df.index[df.index.get_loc(idx)-1], 'signal']
-                else:
-                    last_trade_index = idx
+        for i in df.index[df['trade'] != 0]:
+            curr_idx = df.index.get_loc(i)
+            if last_trade_idx >= 0 and (curr_idx - last_trade_idx) < min_hold_period:
+                df.at[i, 'trade'] = 0
+                df.at[i, 'signal'] = df.iloc[curr_idx - 1]['signal']
+            else:
+                last_trade_idx = curr_idx
 
         return df
