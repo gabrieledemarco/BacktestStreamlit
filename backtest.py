@@ -12,40 +12,41 @@ class Backtester:
         df = self.strategy.generate_signals(data)
 
         # Initialize positions and portfolio
-        df['position'] = df['signal'].fillna(0)
+        df['position'] = df['signal']
 
         # Calculate conservative position size (25% of capital per trade)
         position_size = self.initial_capital * 0.25
 
-        # Initialize shares column with zeros
-        df['shares'] = 0
-
-        # Update shares based on trades
-        trade_indices = df[df['trade'] != 0].index
-        for idx in trade_indices:
-            if df.loc[idx, 'trade'] != 0:
-                # Calculate shares based on position size and current price
-                df.loc[idx, 'shares'] = np.floor(position_size / df.loc[idx, 'Close'])
-
-                # Propagate share count forward until next trade
-                next_trade = trade_indices[trade_indices > idx]
-                if len(next_trade) > 0:
-                    df.loc[idx:next_trade[0], 'shares'] = df.loc[idx, 'shares']
-
-        # Calculate holdings and cash
-        df['holdings'] = df['shares'] * df['Close']
+        # Initialize portfolio columns
+        df['shares'] = 0.0
+        df['holdings'] = 0.0
         df['cash'] = self.initial_capital
+        df['portfolio_value'] = self.initial_capital
 
-        # Update cash based on trades
-        for i in range(1, len(df)):
-            prev_shares = df['shares'].iloc[i-1]
-            curr_shares = df['shares'].iloc[i]
-            share_difference = curr_shares - prev_shares
-            trade_value = share_difference * df['Close'].iloc[i]
-            df.loc[df.index[i], 'cash'] = df['cash'].iloc[i-1] - trade_value
+        # Update shares and cash based on trades
+        for i in range(len(df)):
+            if i == 0:
+                continue
 
-        # Calculate total portfolio value
-        df['portfolio_value'] = df['holdings'] + df['cash']
+            if df['trade'].iloc[i] != 0:
+                # Calculate number of shares for the trade
+                price = df['Close'].iloc[i]
+                shares = np.floor(position_size / price)
+
+                if df['trade'].iloc[i] > 0:  # Buy signal
+                    df.loc[df.index[i], 'shares'] = shares
+                    df.loc[df.index[i], 'cash'] = df['cash'].iloc[i-1] - (shares * price)
+                else:  # Sell signal
+                    df.loc[df.index[i], 'shares'] = 0
+                    df.loc[df.index[i], 'cash'] = df['cash'].iloc[i-1] + (df['shares'].iloc[i-1] * price)
+            else:
+                # Carry forward previous position
+                df.loc[df.index[i], 'shares'] = df['shares'].iloc[i-1]
+                df.loc[df.index[i], 'cash'] = df['cash'].iloc[i-1]
+
+            # Update holdings and portfolio value
+            df.loc[df.index[i], 'holdings'] = df['shares'].iloc[i] * df['Close'].iloc[i]
+            df.loc[df.index[i], 'portfolio_value'] = df['holdings'].iloc[i] + df['cash'].iloc[i]
 
         # Calculate returns
         df['returns'] = df['portfolio_value'].pct_change()
