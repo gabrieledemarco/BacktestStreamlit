@@ -121,7 +121,9 @@ def plot_drawdown(results):
     drawdowns = (results['portfolio_value'] - rolling_max) / rolling_max * 100
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    dates = pd.to_datetime(results.index).tz_localize(None)
+    dates = results.index
+    if dates.tz is not None:
+        dates = dates.tz_convert('UTC').tz_localize(None)
     ax.fill_between(dates, drawdowns, 0, color='red', alpha=0.3)
     ax.plot(dates, drawdowns, color='red', linewidth=1)
 
@@ -138,7 +140,9 @@ def plot_drawdown(results):
 def plot_equity_curve(results):
     """Plot equity curve"""
     fig, ax = plt.subplots(figsize=(12, 6))
-    dates = pd.to_datetime(results.index).tz_localize(None)
+    dates = results.index
+    if dates.tz is not None:
+        dates = dates.tz_convert('UTC').tz_localize(None)
 
     # Plot portfolio value
     ax.plot(dates, results['portfolio_value'], 
@@ -167,12 +171,14 @@ def plot_trades(data, results, short_window, long_window):
     """Plot trading signals"""
     fig, ax = plt.subplots(figsize=(12, 6))
     
-    # Ensure all dates are timezone naive
+    # Convert timezone-aware timestamps to timezone-naive
     data_copy = data.copy()
     results_copy = results.copy()
     
-    data_copy.index = pd.to_datetime(data_copy.index).tz_localize(None)
-    results_copy.index = pd.to_datetime(results_copy.index).tz_localize(None)
+    if data_copy.index.tz is not None:
+        data_copy.index = data_copy.index.tz_convert('UTC').tz_localize(None)
+    if results_copy.index.tz is not None:
+        results_copy.index = results_copy.index.tz_convert('UTC').tz_localize(None)
 
     # Plot price and moving averages
     ax.plot(data_copy.index, data_copy['Close'], 
