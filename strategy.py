@@ -33,9 +33,9 @@ class MovingAverageCrossover:
         for i in range(1, len(df)):
             trade_value = float(df['trade'].iloc[i])
             if trade_value > 0:  # New long position
-                entry_price = float(df['Close'].iloc[i])
+                entry_price = float(df['Close'].iloc[i].iloc[0])
             elif entry_price is not None and float(df['signal'].iloc[i]) == 1:
-                current_price = float(df['Close'].iloc[i])
+                current_price = float(df['Close'].iloc[i].iloc[0])
                 returns = (current_price - entry_price) / entry_price
 
                 if returns >= self.take_profit or returns <= -self.stop_loss:

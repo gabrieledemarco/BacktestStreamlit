@@ -180,9 +180,14 @@ def plot_trades(data, results, short_window, long_window):
     data_copy = data.copy()
     results_copy = results.copy()
 
-    # First convert to UTC then remove timezone info
-    data_copy.index = pd.to_datetime(data_copy.index).tz_convert('UTC').tz_localize(None)
-    results_copy.index = pd.to_datetime(results_copy.index).tz_convert('UTC').tz_localize(None)
+    # Handle timezone conversion safely
+    data_copy.index = pd.to_datetime(data_copy.index)
+    results_copy.index = pd.to_datetime(results_copy.index)
+    
+    if data_copy.index.tz is not None:
+        data_copy.index = data_copy.index.tz_convert('UTC').tz_localize(None)
+    if results_copy.index.tz is not None:
+        results_copy.index = results_copy.index.tz_convert('UTC').tz_localize(None)
 
     # Plot price and moving averages
     ax.plot(data_copy.index, data_copy['Close'], 
