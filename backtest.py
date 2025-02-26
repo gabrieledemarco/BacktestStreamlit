@@ -44,7 +44,7 @@ class Backtester:
             df.iloc[i, df.columns.get_loc('portfolio_value')] = df['holdings'].iloc[i] + df['cash'].iloc[i]
 
         # Calculate returns
-        df['returns'] = df['portfolio_value'].pct_change()
+        df['returns'] = df['portfolio_value'].pct_change(fill_method=None)
         df['strategy_returns'] = df['returns'].fillna(0)
 
         return df

@@ -64,9 +64,11 @@ def calculate_metrics(results):
         annualization_factor = periods_per_day * days_per_year
 
         # Annual return
-        total_days = max((results.index[-1] - results.index[0]).days, 1)
-        initial_value = results['portfolio_value'].iloc[0]
-        final_value = results['portfolio_value'].iloc[-1]
+        start_date = pd.to_datetime(results.index[0])
+        end_date = pd.to_datetime(results.index[-1])
+        total_days = max((end_date - start_date).days, 1)
+        initial_value = float(results['portfolio_value'].iloc[0])
+        final_value = float(results['portfolio_value'].iloc[-1])
 
         if initial_value > 0:
             total_return = (final_value / initial_value) - 1
