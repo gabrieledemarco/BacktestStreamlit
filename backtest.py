@@ -22,7 +22,7 @@ class Backtester:
 
         # Process trades sequentially
         for i in range(1, len(df)):
-            current_price = float(df['Close'].iloc[i])
+            current_price = float(df['Close'].iloc[i].iloc[0])
             trade_signal = float(df['trade'].iloc[i])
 
             # Calculate shares for new positions

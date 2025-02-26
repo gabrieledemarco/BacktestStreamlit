@@ -14,15 +14,19 @@ def get_stock_symbols():
     for index in indices:
         try:
             index_data = yf.Ticker(index)
-            # Get top constituents
-            if hasattr(index_data, 'components'):
-                components = index_data.components
+            # Get top constituents from index info
+            index_info = index_data.info
+            if 'components' in index_info:
+                components = index_info['components']
                 if components is not None:
                     for symbol in components:
-                        ticker = yf.Ticker(symbol)
-                        info = ticker.info
-                        if 'longName' in info:
-                            symbols.add((symbol, info['longName']))
+                        try:
+                            ticker = yf.Ticker(symbol)
+                            info = ticker.info
+                            if 'longName' in info:
+                                symbols.add((symbol, info['longName']))
+                        except:
+                            continue
         except:
             continue
 
@@ -170,7 +174,7 @@ def plot_trades(data, results, short_window, long_window):
     # Convert timezone-aware timestamps to timezone-naive consistently
     data_copy = data.copy()
     results_copy = results.copy()
-    
+
     # Ensure timezone-naive datetime index for both dataframes
     data_copy.index = pd.to_datetime(data_copy.index).tz_localize(None)
     results_copy.index = pd.to_datetime(results_copy.index).tz_localize(None)
