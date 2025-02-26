@@ -84,18 +84,18 @@ try:
             "1h": timedelta(days=730),
             "1d": timedelta(days=3650)
         }
-        
+
         chunk_size = chunk_sizes[interval]
         all_data = []
         current_start = start_date
-        
+
         while current_start < end_date:
             current_end = min(current_start + chunk_size, end_date)
             chunk = yf.download(symbol, start=current_start, end=current_end, interval=interval)
-            if len(chunk) > 0:
+            if chunk is not None and not chunk.empty:
                 all_data.append(chunk)
             current_start = current_end
-        
+
         if not all_data:
             return pd.DataFrame()
         return pd.concat(all_data).drop_duplicates()
