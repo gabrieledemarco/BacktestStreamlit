@@ -87,7 +87,7 @@ try:
 
         # Plot trades
         st.subheader("Trading Signals")
-        fig_trades = plot_trades(data, results)
+        fig_trades = plot_trades(data, results, short_window, long_window)
         st.plotly_chart(fig_trades, use_container_width=True)
 
         # Trade history

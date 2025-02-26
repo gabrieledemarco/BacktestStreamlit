@@ -140,7 +140,7 @@ def plot_equity_curve(results):
 
     return fig
 
-def plot_trades(data, results):
+def plot_trades(data, results, short_window, long_window):
     """Plot trading signals"""
     fig = go.Figure()
 
@@ -158,7 +158,7 @@ def plot_trades(data, results):
         x=results.index,
         y=results['SMA_short'],
         mode='lines',
-        name='Short MA',
+        name=f'{short_window}d MA',
         line=dict(color='#17a2b8', width=1.5)
     ))
 
@@ -166,7 +166,7 @@ def plot_trades(data, results):
         x=results.index,
         y=results['SMA_long'],
         mode='lines',
-        name='Long MA',
+        name=f'{long_window}d MA',
         line=dict(color='#28a745', width=1.5)
     ))
 
