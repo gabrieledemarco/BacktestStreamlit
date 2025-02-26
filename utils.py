@@ -114,11 +114,6 @@ def calculate_metrics(results):
             'win_rate': 0,
             'volatility': 0
         }
-        'sharpe_ratio': sharpe_ratio,
-        'max_drawdown': max_drawdown,
-        'win_rate': win_rate,
-        'volatility': daily_vol * 100
-    }
 
 def plot_drawdown(results):
     """Plot drawdown over time"""
