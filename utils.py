@@ -98,8 +98,22 @@ def calculate_metrics(results):
         winning_trades = trades[trades['strategy_returns'] > 0]
         win_rate = (len(winning_trades) / len(trades)) * 100 if len(trades) > 0 else 0
 
-    return {
-        'annual_return': annual_return,
+        return {
+            'annual_return': annual_return,
+            'sharpe_ratio': sharpe_ratio,
+            'max_drawdown': max_drawdown,
+            'win_rate': win_rate,
+            'volatility': daily_vol * 100
+        }
+    except Exception as e:
+        print(f"Error calculating metrics: {e}")
+        return {
+            'annual_return': 0,
+            'sharpe_ratio': 0,
+            'max_drawdown': 0,
+            'win_rate': 0,
+            'volatility': 0
+        }
         'sharpe_ratio': sharpe_ratio,
         'max_drawdown': max_drawdown,
         'win_rate': win_rate,
