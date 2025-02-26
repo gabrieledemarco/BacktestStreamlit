@@ -172,20 +172,22 @@ def plot_trades(data, results, short_window, long_window):
     # Plot price and moving averages
     ax.plot(dates, data['Close'], 
             label='Close Price', color='#666666', linewidth=1)
-    ax.plot(results.index, results['SMA_short'], 
+    ax.plot(result_dates, results['SMA_short'], 
             label=f'{short_window}d MA', color='#17a2b8', linewidth=1.5)
-    ax.plot(results.index, results['SMA_long'], 
+    ax.plot(result_dates, results['SMA_long'], 
             label=f'{long_window}d MA', color='#28a745', linewidth=1.5)
 
     # Plot buy signals
     buy_signals = results[results['trade'] > 0]
-    ax.scatter(buy_signals.index, buy_signals['Close'], 
+    buy_dates = pd.to_datetime(buy_signals.index).tz_localize(None)
+    ax.scatter(buy_dates, buy_signals['Close'], 
               color='green', marker='^', s=100, 
               label='Buy', zorder=5)
 
     # Plot sell signals
     sell_signals = results[results['trade'] < 0]
-    ax.scatter(sell_signals.index, sell_signals['Close'], 
+    sell_dates = pd.to_datetime(sell_signals.index).tz_localize(None)
+    ax.scatter(sell_dates, sell_signals['Close'], 
               color='red', marker='v', s=100, 
               label='Sell', zorder=5)
 
