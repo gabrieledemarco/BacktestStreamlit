@@ -74,13 +74,33 @@ stop_loss = st.sidebar.slider("Stop Loss (%)", 1.0, 10.0, 2.0) / 100
 initial_capital = st.sidebar.number_input("Initial Capital ($)", value=100000.0)
 
 try:
-    # Fetch data
-    data = yf.download(
-        symbol, 
-        start=start_date, 
-        end=end_date, 
-        interval=interval
-    )
+    # Fetch data with retry logic
+    def fetch_data_in_chunks(symbol, start_date, end_date, interval):
+        chunk_sizes = {
+            "1m": timedelta(days=7),
+            "5m": timedelta(days=60),
+            "15m": timedelta(days=60),
+            "30m": timedelta(days=60),
+            "1h": timedelta(days=730),
+            "1d": timedelta(days=3650)
+        }
+        
+        chunk_size = chunk_sizes[interval]
+        all_data = []
+        current_start = start_date
+        
+        while current_start < end_date:
+            current_end = min(current_start + chunk_size, end_date)
+            chunk = yf.download(symbol, start=current_start, end=current_end, interval=interval)
+            if len(chunk) > 0:
+                all_data.append(chunk)
+            current_start = current_end
+        
+        if not all_data:
+            return pd.DataFrame()
+        return pd.concat(all_data).drop_duplicates()
+
+    data = fetch_data_in_chunks(symbol, start_date, end_date, interval)
 
     if len(data) == 0:
         st.error("No data found for the specified symbol and date range.")
