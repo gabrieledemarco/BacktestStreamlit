@@ -5,15 +5,28 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from strategy import MovingAverageCrossover
 from backtest import Backtester
-from utils import calculate_metrics, plot_equity_curve, plot_trades, plot_drawdown
+from utils import calculate_metrics, plot_equity_curve, plot_trades, plot_drawdown, get_stock_symbols
 
 st.set_page_config(page_title="Trading Strategy Backtester", layout="wide")
 
 st.title("Moving Average Crossover Strategy Backtester")
 
+# Get available stock symbols
+symbols = get_stock_symbols()
+symbol_dict = {f"{symbol} - {name}": symbol for symbol, name in symbols}
+
 # Sidebar inputs
 st.sidebar.header("Strategy Parameters")
-symbol = st.sidebar.text_input("Stock Symbol", value="SPY")
+
+# Symbol selection with autocomplete
+symbol_option = st.sidebar.selectbox(
+    "Stock Symbol",
+    options=list(symbol_dict.keys()),
+    index=0 if symbol_dict else None,
+    help="Type to search for available symbols"
+)
+symbol = symbol_dict[symbol_option] if symbol_option else "SPY"
+
 start_date = st.sidebar.date_input(
     "Start Date",
     datetime.now() - timedelta(days=365*2)

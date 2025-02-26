@@ -2,6 +2,50 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import yfinance as yf
+import streamlit as st
+
+@st.cache_data(ttl=24*3600)  # Cache for 24 hours
+def get_stock_symbols():
+    """Get list of stock symbols and company names"""
+    # Major indices to get symbols from
+    indices = ['^GSPC', '^DJI', '^IXIC']  # S&P 500, Dow Jones, NASDAQ
+    symbols = set()
+
+    for index in indices:
+        try:
+            index_data = yf.Ticker(index)
+            # Get top constituents
+            if hasattr(index_data, 'components'):
+                components = index_data.components
+                if components is not None:
+                    for symbol in components:
+                        ticker = yf.Ticker(symbol)
+                        info = ticker.info
+                        if 'longName' in info:
+                            symbols.add((symbol, info['longName']))
+        except:
+            continue
+
+    # Add some common stocks if set is empty
+    if not symbols:
+        default_symbols = [
+            ('AAPL', 'Apple Inc.'),
+            ('MSFT', 'Microsoft Corporation'),
+            ('GOOGL', 'Alphabet Inc.'),
+            ('AMZN', 'Amazon.com Inc.'),
+            ('META', 'Meta Platforms Inc.'),
+            ('TSLA', 'Tesla Inc.'),
+            ('NVDA', 'NVIDIA Corporation'),
+            ('JPM', 'JPMorgan Chase & Co.'),
+            ('V', 'Visa Inc.'),
+            ('JNJ', 'Johnson & Johnson')
+        ]
+        symbols.update(default_symbols)
+
+    # Convert to list and sort by symbol
+    symbols_list = sorted(list(symbols), key=lambda x: x[0])
+    return symbols_list
 
 def calculate_metrics(results):
     """Calculate performance metrics"""
