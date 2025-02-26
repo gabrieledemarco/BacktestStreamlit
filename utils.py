@@ -47,46 +47,29 @@ def get_stock_symbols():
     return symbols_list
 
 def calculate_metrics(results):
-    """Calculate performance metrics with timeframe adjustment"""
-    periods_per_day = 1
-    if len(results) > 0:
-        time_diff = results.index[1] - results.index[0]
-        if time_diff.seconds < 24 * 3600:  # Intraday data
-            periods_per_day = int(24 * 3600 / time_diff.seconds)
-
-    days_per_year = 252  # Trading days per year
-    annualization_factor = periods_per_day * days_per_year
-
+    """Calculate performance metrics"""
     # Annual return
-    total_days = (results.index[-1] - results.index[0]).days
-    if total_days < 1:
-        total_days = 1
+    total_days = len(results)
     total_return = (results['portfolio_value'].iloc[-1] / results['portfolio_value'].iloc[0]) - 1
-    annual_return = ((1 + total_return) ** (days_per_year / total_days) - 1) * 100
+    annual_return = ((1 + total_return) ** (252/total_days) - 1) * 100
 
-    # Daily returns volatility (annualized)
-    daily_vol = results['strategy_returns'].std() * np.sqrt(annualization_factor)
+    # Daily returns volatility
+    daily_vol = results['strategy_returns'].std() * np.sqrt(252)
 
-    # Safeguard for computing Sharpe Ratio
+    # Sharpe ratio
     risk_free_rate = 0.02  # Assuming 2% risk-free rate
-    excess_returns = results['strategy_returns'] - risk_free_rate / annualization_factor
-    if excess_returns.std() != 0:
-        sharpe_ratio = np.sqrt(annualization_factor) * excess_returns.mean() / excess_returns.std()
-    else:
-        sharpe_ratio = 0.0  # Assign a default value if the standard deviation is zero
+    excess_returns = results['strategy_returns'] - risk_free_rate/252
+    sharpe_ratio = np.sqrt(252) * excess_returns.mean() / excess_returns.std()
 
     # Maximum drawdown
     rolling_max = results['portfolio_value'].cummax()
     drawdowns = (results['portfolio_value'] - rolling_max) / rolling_max
-    max_drawdown = drawdowns.min() * 100 if rolling_max.max() > 0 else 0.0
+    max_drawdown = drawdowns.min() * 100
 
     # Win rate
     trades = results[results['trade'].notna() & (results['trade'] != 0)]
-    if len(trades) > 0:
-        winning_trades = trades[trades['strategy_returns'] > 0]
-        win_rate = (len(winning_trades) / len(trades)) * 100
-    else:
-        win_rate = 0.0  # If there are no trades, win rate is zero
+    winning_trades = trades[trades['strategy_returns'] > 0]
+    win_rate = (len(winning_trades) / len(trades)) * 100 if len(trades) > 0 else 0
 
     return {
         'annual_return': annual_return,
