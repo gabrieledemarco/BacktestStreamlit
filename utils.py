@@ -121,9 +121,9 @@ def plot_drawdown(results):
     drawdowns = (results['portfolio_value'] - rolling_max) / rolling_max * 100
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    dates = pd.to_datetime(results.index)
+    dates = pd.to_datetime(results.index).tz_localize(None)
     ax.fill_between(dates, drawdowns, 0, color='red', alpha=0.3)
-    ax.plot(results.index, drawdowns, color='red', linewidth=1)
+    ax.plot(dates, drawdowns, color='red', linewidth=1)
 
     ax.set_title('Portfolio Drawdown')
     ax.set_xlabel('Date')
@@ -138,7 +138,7 @@ def plot_drawdown(results):
 def plot_equity_curve(results):
     """Plot equity curve"""
     fig, ax = plt.subplots(figsize=(12, 6))
-    dates = pd.to_datetime(results.index)
+    dates = pd.to_datetime(results.index).tz_localize(None)
 
     # Plot portfolio value
     ax.plot(dates, results['portfolio_value'], 
@@ -166,8 +166,8 @@ def plot_equity_curve(results):
 def plot_trades(data, results, short_window, long_window):
     """Plot trading signals"""
     fig, ax = plt.subplots(figsize=(12, 6))
-    dates = pd.to_datetime(data.index)
-    result_dates = pd.to_datetime(results.index)
+    dates = pd.to_datetime(data.index).tz_localize(None)
+    result_dates = pd.to_datetime(results.index).tz_localize(None)
 
     # Plot price and moving averages
     ax.plot(dates, data['Close'], 
