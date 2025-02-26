@@ -48,40 +48,55 @@ def get_stock_symbols():
 
 def calculate_metrics(results):
     """Calculate performance metrics with timeframe adjustment"""
-    # Determine annualization factor based on data frequency
-    periods_per_day = 1
-    if len(results) > 0:
-        time_diff = results.index[1] - results.index[0]
-        if time_diff.seconds < 24*3600:  # Intraday data
-            periods_per_day = int(24*3600 / time_diff.seconds)
+    try:
+        # Determine annualization factor based on data frequency
+        periods_per_day = 1
+        if len(results) > 1:  # Ensure we have at least 2 data points
+            time_diff = results.index[1] - results.index[0]
+            if time_diff.seconds < 24*3600:  # Intraday data
+                periods_per_day = int(24*3600 / time_diff.seconds)
 
-    days_per_year = 252  # Trading days per year
-    annualization_factor = periods_per_day * days_per_year
+        days_per_year = 252  # Trading days per year
+        annualization_factor = periods_per_day * days_per_year
 
-    # Annual return
-    total_days = (results.index[-1] - results.index[0]).days
-    if total_days < 1:
-        total_days = 1
-    total_return = (results['portfolio_value'].iloc[-1] / results['portfolio_value'].iloc[0]) - 1
-    annual_return = ((1 + total_return) ** (days_per_year/total_days) - 1) * 100
+        # Annual return
+        total_days = max((results.index[-1] - results.index[0]).days, 1)
+        initial_value = results['portfolio_value'].iloc[0]
+        final_value = results['portfolio_value'].iloc[-1]
+        
+        if initial_value > 0:
+            total_return = (final_value / initial_value) - 1
+            annual_return = ((1 + total_return) ** (days_per_year/total_days) - 1) * 100
+        else:
+            annual_return = 0
 
-    # Daily returns volatility (annualized)
-    daily_vol = results['strategy_returns'].std() * np.sqrt(annualization_factor)
+        # Daily returns volatility (annualized)
+        daily_vol = results['strategy_returns'].std()
+        if not np.isnan(daily_vol):
+            daily_vol = daily_vol * np.sqrt(annualization_factor)
+        else:
+            daily_vol = 0
 
-    # Sharpe ratio
-    risk_free_rate = 0.02  # Assuming 2% risk-free rate
-    excess_returns = results['strategy_returns'] - risk_free_rate/annualization_factor
-    sharpe_ratio = np.sqrt(annualization_factor) * excess_returns.mean() / excess_returns.std()
+        # Sharpe ratio
+        risk_free_rate = 0.02  # Assuming 2% risk-free rate
+        excess_returns = results['strategy_returns'] - risk_free_rate/annualization_factor
+        std_excess = excess_returns.std()
+        if std_excess > 0:
+            sharpe_ratio = np.sqrt(annualization_factor) * excess_returns.mean() / std_excess
+        else:
+            sharpe_ratio = 0
 
-    # Maximum drawdown
-    rolling_max = results['portfolio_value'].cummax()
-    drawdowns = (results['portfolio_value'] - rolling_max) / rolling_max
-    max_drawdown = drawdowns.min() * 100
+        # Maximum drawdown
+        rolling_max = results['portfolio_value'].cummax()
+        drawdowns = np.where(rolling_max > 0, 
+                           (results['portfolio_value'] - rolling_max) / rolling_max,
+                           0)
+        max_drawdown = min(drawdowns) * 100
 
-    # Win rate
-    trades = results[results['trade'].notna() & (results['trade'] != 0)]
-    winning_trades = trades[trades['strategy_returns'] > 0]
-    win_rate = (len(winning_trades) / len(trades)) * 100 if len(trades) > 0 else 0
+        # Win rate
+        trades = results[results['trade'].notna() & (results['trade'] != 0)]
+        winning_trades = trades[trades['strategy_returns'] > 0]
+        win_rate = (len(winning_trades) / len(trades)) * 100 if len(trades) > 0 else 0
 
     return {
         'annual_return': annual_return,
