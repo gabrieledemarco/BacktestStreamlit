@@ -176,18 +176,22 @@ def plot_trades(data, results, short_window, long_window):
     """Plot trading signals"""
     fig, ax = plt.subplots(figsize=(12, 6))
 
-    # Convert timezone-aware timestamps to timezone-naive consistently
+    # Create fresh copies of the data
     data_copy = data.copy()
     results_copy = results.copy()
-
-    # Handle timezone conversion safely
-    data_copy.index = pd.to_datetime(data_copy.index)
-    results_copy.index = pd.to_datetime(results_copy.index)
     
-    if data_copy.index.tz is not None:
-        data_copy.index = data_copy.index.tz_convert('UTC').tz_localize(None)
-    if results_copy.index.tz is not None:
-        results_copy.index = results_copy.index.tz_convert('UTC').tz_localize(None)
+    # Reset and rebuild index
+    start_date = pd.to_datetime(data_copy.index[0]).tz_localize(None)
+    end_date = pd.to_datetime(data_copy.index[-1]).tz_localize(None)
+    
+    # Determine frequency from data
+    if len(data_copy) > 1:
+        freq = pd.to_datetime(data_copy.index[1]) - pd.to_datetime(data_copy.index[0])
+        new_index = pd.date_range(start=start_date, end=end_date, freq=freq)
+        
+        # Reindex data with new datetime index
+        data_copy.index = new_index
+        results_copy.index = new_index
 
     # Plot price and moving averages
     ax.plot(data_copy.index, data_copy['Close'], 
