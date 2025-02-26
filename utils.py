@@ -121,13 +121,15 @@ def calculate_metrics(results):
 
 def plot_drawdown(results):
     """Plot drawdown over time"""
-    rolling_max = results['portfolio_value'].cummax()
-    drawdowns = (results['portfolio_value'] - rolling_max) / rolling_max * 100
+    results_copy = results.copy()
+    results_copy.index = pd.to_datetime(results_copy.index).tz_localize(None)
+    
+    rolling_max = results_copy['portfolio_value'].cummax()
+    drawdowns = (results_copy['portfolio_value'] - rolling_max) / rolling_max * 100
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    dates = pd.to_datetime(results.index).tz_localize(None)
-    ax.fill_between(dates, drawdowns, 0, color='red', alpha=0.3)
-    ax.plot(dates, drawdowns, color='red', linewidth=1)
+    ax.fill_between(results_copy.index, drawdowns, 0, color='red', alpha=0.3)
+    ax.plot(results_copy.index, drawdowns, color='red', linewidth=1)
 
     ax.set_title('Portfolio Drawdown')
     ax.set_xlabel('Date')
@@ -142,17 +144,20 @@ def plot_drawdown(results):
 def plot_equity_curve(results):
     """Plot equity curve"""
     fig, ax = plt.subplots(figsize=(12, 6))
-    dates = pd.to_datetime(results.index).tz_localize(None)
-
+    
+    # Ensure consistent timezone handling
+    results_copy = results.copy()
+    results_copy.index = pd.to_datetime(results_copy.index).tz_localize(None)
+    
     # Plot portfolio value
-    ax.plot(dates, results['portfolio_value'], 
+    ax.plot(results_copy.index, results_copy['portfolio_value'], 
             label='Portfolio Value', color='#17a2b8', linewidth=2)
 
     # Add buy and hold comparison
-    initial_price = results['Close'].iloc[0]
-    initial_shares = results['portfolio_value'].iloc[0] / initial_price
-    buy_hold = initial_shares * results['Close']
-    ax.plot(results.index, buy_hold, 
+    initial_price = results_copy['Close'].iloc[0]
+    initial_shares = results_copy['portfolio_value'].iloc[0] / initial_price
+    buy_hold = initial_shares * results_copy['Close']
+    ax.plot(results_copy.index, buy_hold, 
             label='Buy & Hold', color='#666666', 
             linestyle='--', linewidth=1)
 
