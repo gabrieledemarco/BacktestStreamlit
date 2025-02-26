@@ -63,7 +63,7 @@ def calculate_metrics(results):
         total_days = max((results.index[-1] - results.index[0]).days, 1)
         initial_value = results['portfolio_value'].iloc[0]
         final_value = results['portfolio_value'].iloc[-1]
-        
+
         if initial_value > 0:
             total_return = (final_value / initial_value) - 1
             annual_return = ((1 + total_return) ** (days_per_year/total_days) - 1) * 100
@@ -121,8 +121,8 @@ def plot_drawdown(results):
     drawdowns = (results['portfolio_value'] - rolling_max) / rolling_max * 100
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    dates = results.index
-    if dates.tz is not None:
+    dates = pd.to_datetime(results.index)
+    if hasattr(dates, 'tz') and dates.tz is not None:
         dates = dates.tz_convert('UTC').tz_localize(None)
     ax.fill_between(dates, drawdowns, 0, color='red', alpha=0.3)
     ax.plot(dates, drawdowns, color='red', linewidth=1)
@@ -140,8 +140,8 @@ def plot_drawdown(results):
 def plot_equity_curve(results):
     """Plot equity curve"""
     fig, ax = plt.subplots(figsize=(12, 6))
-    dates = results.index
-    if dates.tz is not None:
+    dates = pd.to_datetime(results.index)
+    if hasattr(dates, 'tz') and dates.tz is not None:
         dates = dates.tz_convert('UTC').tz_localize(None)
 
     # Plot portfolio value
@@ -170,11 +170,11 @@ def plot_equity_curve(results):
 def plot_trades(data, results, short_window, long_window):
     """Plot trading signals"""
     fig, ax = plt.subplots(figsize=(12, 6))
-    
+
     # Convert timezone-aware timestamps to timezone-naive
     data_copy = data.copy()
     results_copy = results.copy()
-    
+
     if data_copy.index.tz is not None:
         data_copy.index = data_copy.index.tz_convert('UTC').tz_localize(None)
     if results_copy.index.tz is not None:
