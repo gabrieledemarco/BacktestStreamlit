@@ -12,19 +12,16 @@ st.title("Moving Average Crossover Strategy Backtester")
 
 # Get available stock symbols
 symbols = get_stock_symbols()
+
+# Check if symbols is None or empty
+if symbols is None or len(symbols) == 0:
+    st.error("No stock symbols found. Please check the data source.")
+    st.stop()  # Stop execution if no symbols are found
+
 symbol_dict = {f"{symbol} - {name}": symbol for symbol, name in symbols}
 
 # Sidebar inputs
 st.sidebar.header("Strategy Parameters")
-
-# Symbol selection with autocomplete
-symbol_option = st.sidebar.selectbox(
-    "Stock Symbol",
-    options=list(symbol_dict.keys()),
-    index=0 if symbol_dict else None,
-    help="Type to search for available symbols"
-)
-symbol = symbol_dict[symbol_option] if symbol_option else "SPY"
 
 # Timeframe selection
 timeframe_options = {
