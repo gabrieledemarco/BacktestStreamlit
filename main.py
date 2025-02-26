@@ -26,11 +26,43 @@ symbol_option = st.sidebar.selectbox(
 )
 symbol = symbol_dict[symbol_option] if symbol_option else "SPY"
 
+# Timeframe selection
+timeframe_options = {
+    "1 minute": "1m",
+    "5 minutes": "5m",
+    "15 minutes": "15m",
+    "30 minutes": "30m",
+    "1 hour": "1h",
+    "Daily": "1d"
+}
+selected_timeframe = st.sidebar.selectbox(
+    "Timeframe",
+    options=list(timeframe_options.keys()),
+    index=len(timeframe_options)-1  # Default to daily
+)
+interval = timeframe_options[selected_timeframe]
+
+# Adjust date range based on timeframe
+max_lookback = {
+    "1m": 7,      # 7 days
+    "5m": 60,     # 60 days
+    "15m": 60,    # 60 days
+    "30m": 60,    # 60 days
+    "1h": 730,    # 730 days
+    "1d": 3650    # 10 years
+}
+
+max_days = max_lookback[interval]
+today = datetime.now()
+default_start = today - timedelta(days=min(max_days, 365))
+
 start_date = st.sidebar.date_input(
     "Start Date",
-    datetime.now() - timedelta(days=365*2)
+    default_start,
+    min_value=today - timedelta(days=max_days),
+    max_value=today
 )
-end_date = st.sidebar.date_input("End Date", datetime.now())
+end_date = st.sidebar.date_input("End Date", today)
 
 # MA parameters
 short_window = st.sidebar.slider("Short MA Window", 5, 50, 20)
@@ -43,7 +75,12 @@ initial_capital = st.sidebar.number_input("Initial Capital ($)", value=100000.0)
 
 try:
     # Fetch data
-    data = yf.download(symbol, start=start_date, end=end_date)
+    data = yf.download(
+        symbol, 
+        start=start_date, 
+        end=end_date, 
+        interval=interval
+    )
 
     if len(data) == 0:
         st.error("No data found for the specified symbol and date range.")
