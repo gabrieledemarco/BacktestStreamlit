@@ -142,100 +142,79 @@ def plot_equity_curve(results):
 
 def plot_trades(data, results):
     """Plot trading signals"""
-    # Create figure with secondary y-axis
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    fig = go.Figure()
 
     # Plot price
-    fig.add_trace(
-        go.Scatter(
-            x=data.index,
-            y=data['Close'],
-            mode='lines',
-            name='Close Price',
-            line=dict(color='#666666')
-        ),
-        secondary_y=False
-    )
+    fig.add_trace(go.Scatter(
+        x=data.index,
+        y=data['Close'],
+        mode='lines',
+        name='Close Price',
+        line=dict(color='#666666', width=1)
+    ))
 
     # Plot moving averages
-    fig.add_trace(
-        go.Scatter(
-            x=results.index,
-            y=results['SMA_short'],
-            mode='lines',
-            name=f'{results.SMA_short.name} MA',
-            line=dict(color='#17a2b8')
-        ),
-        secondary_y=False
-    )
+    fig.add_trace(go.Scatter(
+        x=results.index,
+        y=results['SMA_short'],
+        mode='lines',
+        name=f'{results.short_window}d MA',
+        line=dict(color='#17a2b8', width=1.5)
+    ))
 
-    fig.add_trace(
-        go.Scatter(
-            x=results.index,
-            y=results['SMA_long'],
-            mode='lines',
-            name=f'{results.SMA_long.name} MA',
-            line=dict(color='#28a745')
-        ),
-        secondary_y=False
-    )
+    fig.add_trace(go.Scatter(
+        x=results.index,
+        y=results['SMA_long'],
+        mode='lines',
+        name=f'{results.long_window}d MA',
+        line=dict(color='#28a745', width=1.5)
+    ))
 
     # Plot buy signals
     buy_signals = results[results['trade'] > 0]
-    fig.add_trace(
-        go.Scatter(
-            x=buy_signals.index,
-            y=buy_signals['Close'],
-            mode='markers',
-            name='Buy',
-            marker=dict(
-                color='green',
-                size=10,
-                symbol='triangle-up'
-            )
-        ),
-        secondary_y=False
-    )
+    fig.add_trace(go.Scatter(
+        x=buy_signals.index,
+        y=buy_signals['Close'],
+        mode='markers',
+        name='Buy',
+        marker=dict(
+            color='green',
+            size=12,
+            symbol='triangle-up',
+            line=dict(color='darkgreen', width=1)
+        )
+    ))
 
     # Plot sell signals
     sell_signals = results[results['trade'] < 0]
-    fig.add_trace(
-        go.Scatter(
-            x=sell_signals.index,
-            y=sell_signals['Close'],
-            mode='markers',
-            name='Sell',
-            marker=dict(
-                color='red',
-                size=10,
-                symbol='triangle-down'
-            )
-        ),
-        secondary_y=False
-    )
-
-    # Add MA difference percentage on secondary y-axis
-    fig.add_trace(
-        go.Scatter(
-            x=results.index,
-            y=results['ma_diff_pct'],
-            mode='lines',
-            name='MA Difference %',
-            line=dict(color='#ffc107', dash='dot'),
-            opacity=0.5
-        ),
-        secondary_y=True
-    )
+    fig.add_trace(go.Scatter(
+        x=sell_signals.index,
+        y=sell_signals['Close'],
+        mode='markers',
+        name='Sell',
+        marker=dict(
+            color='red',
+            size=12,
+            symbol='triangle-down',
+            line=dict(color='darkred', width=1)
+        )
+    ))
 
     fig.update_layout(
         title='Trading Signals',
         xaxis_title='Date',
+        yaxis_title='Price ($)',
         template='plotly_white',
-        height=600
+        height=600,
+        showlegend=True,
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=0.01,
+            bgcolor='rgba(255, 255, 255, 0.8)'
+        ),
+        margin=dict(l=50, r=50, t=50, b=50)
     )
-
-    # Update y-axes labels
-    fig.update_yaxes(title_text="Price ($)", secondary_y=False)
-    fig.update_yaxes(title_text="MA Difference (%)", secondary_y=True)
 
     return fig
