@@ -166,28 +166,31 @@ def plot_equity_curve(results):
 def plot_trades(data, results, short_window, long_window):
     """Plot trading signals"""
     fig, ax = plt.subplots(figsize=(12, 6))
-    dates = pd.to_datetime(data.index).tz_localize(None)
-    result_dates = pd.to_datetime(results.index).tz_localize(None)
+    
+    # Ensure all dates are timezone naive
+    data_copy = data.copy()
+    results_copy = results.copy()
+    
+    data_copy.index = pd.to_datetime(data_copy.index).tz_localize(None)
+    results_copy.index = pd.to_datetime(results_copy.index).tz_localize(None)
 
     # Plot price and moving averages
-    ax.plot(dates, data['Close'], 
+    ax.plot(data_copy.index, data_copy['Close'], 
             label='Close Price', color='#666666', linewidth=1)
-    ax.plot(result_dates, results['SMA_short'], 
+    ax.plot(results_copy.index, results_copy['SMA_short'], 
             label=f'{short_window}d MA', color='#17a2b8', linewidth=1.5)
-    ax.plot(result_dates, results['SMA_long'], 
+    ax.plot(results_copy.index, results_copy['SMA_long'], 
             label=f'{long_window}d MA', color='#28a745', linewidth=1.5)
 
     # Plot buy signals
-    buy_signals = results[results['trade'] > 0]
-    buy_dates = pd.to_datetime(buy_signals.index).tz_localize(None)
-    ax.scatter(buy_dates, buy_signals['Close'], 
+    buy_signals = results_copy[results_copy['trade'] > 0]
+    ax.scatter(buy_signals.index, buy_signals['Close'], 
               color='green', marker='^', s=100, 
               label='Buy', zorder=5)
 
     # Plot sell signals
-    sell_signals = results[results['trade'] < 0]
-    sell_dates = pd.to_datetime(sell_signals.index).tz_localize(None)
-    ax.scatter(sell_dates, sell_signals['Close'], 
+    sell_signals = results_copy[results_copy['trade'] < 0]
+    ax.scatter(sell_signals.index, sell_signals['Close'], 
               color='red', marker='v', s=100, 
               label='Sell', zorder=5)
 
