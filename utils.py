@@ -121,7 +121,8 @@ def plot_drawdown(results):
     drawdowns = (results['portfolio_value'] - rolling_max) / rolling_max * 100
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.fill_between(results.index, drawdowns, 0, color='red', alpha=0.3)
+    dates = pd.to_datetime(results.index)
+    ax.fill_between(dates, drawdowns, 0, color='red', alpha=0.3)
     ax.plot(results.index, drawdowns, color='red', linewidth=1)
 
     ax.set_title('Portfolio Drawdown')
@@ -137,9 +138,10 @@ def plot_drawdown(results):
 def plot_equity_curve(results):
     """Plot equity curve"""
     fig, ax = plt.subplots(figsize=(12, 6))
+    dates = pd.to_datetime(results.index)
 
     # Plot portfolio value
-    ax.plot(results.index, results['portfolio_value'], 
+    ax.plot(dates, results['portfolio_value'], 
             label='Portfolio Value', color='#17a2b8', linewidth=2)
 
     # Add buy and hold comparison
@@ -164,9 +166,11 @@ def plot_equity_curve(results):
 def plot_trades(data, results, short_window, long_window):
     """Plot trading signals"""
     fig, ax = plt.subplots(figsize=(12, 6))
+    dates = pd.to_datetime(data.index)
+    result_dates = pd.to_datetime(results.index)
 
     # Plot price and moving averages
-    ax.plot(data.index, data['Close'], 
+    ax.plot(dates, data['Close'], 
             label='Close Price', color='#666666', linewidth=1)
     ax.plot(results.index, results['SMA_short'], 
             label=f'{short_window}d MA', color='#17a2b8', linewidth=1.5)
