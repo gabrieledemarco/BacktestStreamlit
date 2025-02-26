@@ -158,7 +158,7 @@ def plot_trades(data, results):
         x=results.index,
         y=results['SMA_short'],
         mode='lines',
-        name=f'{results.short_window}d MA',
+        name='Short MA',
         line=dict(color='#17a2b8', width=1.5)
     ))
 
@@ -166,7 +166,7 @@ def plot_trades(data, results):
         x=results.index,
         y=results['SMA_long'],
         mode='lines',
-        name=f'{results.long_window}d MA',
+        name='Long MA',
         line=dict(color='#28a745', width=1.5)
     ))
 
