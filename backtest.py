@@ -22,7 +22,7 @@ class Backtester:
 
         # Process trades sequentially
         for i in range(1, len(df)):
-            current_price = float(df['Close'].iloc[i].iloc[0])
+            current_price = float(df['Close'].iloc[i])
             trade_signal = float(df['trade'].iloc[i])
 
             # Calculate shares for new positions
@@ -44,7 +44,7 @@ class Backtester:
             df.iloc[i, df.columns.get_loc('portfolio_value')] = df['holdings'].iloc[i] + df['cash'].iloc[i]
 
         # Calculate returns
-        df['returns'] = df['portfolio_value'].pct_change(fill_method=None)
+        df['returns'] = df['portfolio_value'].pct_change()
         df['strategy_returns'] = df['returns'].fillna(0)
 
         return df

@@ -7,63 +7,156 @@ import streamlit as st
 @st.cache_data(ttl=24*3600)  # Cache for 24 hours
 def get_stock_symbols():
     """Get list of stock symbols and company names"""
-    # [Omitted for brevity]
+    # Major indices to get symbols from
+    indices = ['^GSPC', '^DJI', '^IXIC']  # S&P 500, Dow Jones, NASDAQ
+    symbols = set()
+
+    for index in indices:
+        try:
+            index_data = yf.Ticker(index)
+            # Get top constituents
+            if hasattr(index_data, 'components'):
+                components = index_data.components
+                if components is not None:
+                    for symbol in components:
+                        ticker = yf.Ticker(symbol)
+                        info = ticker.info
+                        if 'longName' in info:
+                            symbols.add((symbol, info['longName']))
+        except:
+            continue
+
+    # Add some common stocks if set is empty
+    if not symbols:
+        default_symbols = [
+            ('AAPL', 'Apple Inc.'),
+            ('MSFT', 'Microsoft Corporation'),
+            ('GOOGL', 'Alphabet Inc.'),
+            ('AMZN', 'Amazon.com Inc.'),
+            ('META', 'Meta Platforms Inc.'),
+            ('TSLA', 'Tesla Inc.'),
+            ('NVDA', 'NVIDIA Corporation'),
+            ('JPM', 'JPMorgan Chase & Co.'),
+            ('V', 'Visa Inc.'),
+            ('JNJ', 'Johnson & Johnson')
+        ]
+        symbols.update(default_symbols)
+
+    # Convert to list and sort by symbol
+    symbols_list = sorted(list(symbols), key=lambda x: x[0])
+    return symbols_list
 
 def calculate_metrics(results):
     """Calculate performance metrics with timeframe adjustment"""
-    # [Omitted for brevity]
+    # Determine annualization factor based on data frequency
+    periods_per_day = 1
+    if len(results) > 0:
+        time_diff = results.index[1] - results.index[0]
+        if time_diff.seconds < 24*3600:  # Intraday data
+            periods_per_day = int(24*3600 / time_diff.seconds)
+
+    days_per_year = 252  # Trading days per year
+    annualization_factor = periods_per_day * days_per_year
+
+    # Annual return
+    total_days = (results.index[-1] - results.index[0]).days
+    if total_days < 1:
+        total_days = 1
+    total_return = (results['portfolio_value'].iloc[-1] / results['portfolio_value'].iloc[0]) - 1
+    annual_return = ((1 + total_return) ** (days_per_year/total_days) - 1) * 100
+
+    # Daily returns volatility (annualized)
+    daily_vol = results['strategy_returns'].std() * np.sqrt(annualization_factor)
+
+    # Sharpe ratio
+    risk_free_rate = 0.02  # Assuming 2% risk-free rate
+    excess_returns = results['strategy_returns'] - risk_free_rate/annualization_factor
+    sharpe_ratio = np.sqrt(annualization_factor) * excess_returns.mean() / excess_returns.std()
+
+    # Maximum drawdown
+    rolling_max = results['portfolio_value'].cummax()
+    drawdowns = (results['portfolio_value'] - rolling_max) / rolling_max
+    max_drawdown = drawdowns.min() * 100
+
+    # Win rate
+    trades = results[results['trade'].notna() & (results['trade'] != 0)]
+    winning_trades = trades[trades['strategy_returns'] > 0]
+    win_rate = (len(winning_trades) / len(trades)) * 100 if len(trades) > 0 else 0
+
+    return {
+        'annual_return': annual_return,
+        'sharpe_ratio': sharpe_ratio,
+        'max_drawdown': max_drawdown,
+        'win_rate': win_rate,
+        'volatility': daily_vol * 100
+    }
 
 def plot_drawdown(results):
     """Plot drawdown over time"""
-    # [Omitted for brevity]
+    rolling_max = results['portfolio_value'].cummax()
+    drawdowns = (results['portfolio_value'] - rolling_max) / rolling_max * 100
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.fill_between(results.index, drawdowns, 0, color='red', alpha=0.3)
+    ax.plot(results.index, drawdowns, color='red', linewidth=1)
+
+    ax.set_title('Portfolio Drawdown')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Drawdown (%)')
+    ax.grid(True, alpha=0.3)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    plt.tight_layout()
+    return fig
 
 def plot_equity_curve(results):
     """Plot equity curve"""
-    # [Omitted for brevity]
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    # Plot portfolio value
+    ax.plot(results.index, results['portfolio_value'], 
+            label='Portfolio Value', color='#17a2b8', linewidth=2)
+
+    # Add buy and hold comparison
+    initial_price = results['Close'].iloc[0]
+    initial_shares = results['portfolio_value'].iloc[0] / initial_price
+    buy_hold = initial_shares * results['Close']
+    ax.plot(results.index, buy_hold, 
+            label='Buy & Hold', color='#666666', 
+            linestyle='--', linewidth=1)
+
+    ax.set_title('Portfolio Value Over Time vs Buy & Hold')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Portfolio Value ($)')
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    plt.tight_layout()
+    return fig
 
 def plot_trades(data, results, short_window, long_window):
     """Plot trading signals"""
     fig, ax = plt.subplots(figsize=(12, 6))
 
-    # Create fresh copies of the data
-    data_copy = data.copy()
-    results_copy = results.copy()
-
-    # Reset and rebuild index
-    start_date = pd.to_datetime(data_copy.index[0]).tz_localize(None)
-    end_date = pd.to_datetime(data_copy.index[-1]).tz_localize(None)
-
-    # Determine frequency from data
-    if len(data_copy) > 1:
-        freq = pd.to_datetime(data_copy.index[1]) - pd.to_datetime(data_copy.index[0])
-        new_index = pd.date_range(start=start_date, end=end_date, freq=freq)
-
-        # Debugging statement for index lengths
-        print(f"New index length: {len(new_index)}, Data copy length: {len(data_copy)}")
-
-        # Check if new index length matches data_copy length
-        if len(new_index) == len(data_copy):
-            data_copy.index = new_index
-            results_copy.index = new_index
-        else:
-            raise ValueError("Length of new index does not match data length.")
-
     # Plot price and moving averages
-    ax.plot(data_copy.index, data_copy['Close'], 
+    ax.plot(data.index, data['Close'], 
             label='Close Price', color='#666666', linewidth=1)
-    ax.plot(results_copy.index, results_copy['SMA_short'], 
+    ax.plot(results.index, results['SMA_short'], 
             label=f'{short_window}d MA', color='#17a2b8', linewidth=1.5)
-    ax.plot(results_copy.index, results_copy['SMA_long'], 
+    ax.plot(results.index, results['SMA_long'], 
             label=f'{long_window}d MA', color='#28a745', linewidth=1.5)
 
     # Plot buy signals
-    buy_signals = results_copy[results_copy['trade'] > 0]
+    buy_signals = results[results['trade'] > 0]
     ax.scatter(buy_signals.index, buy_signals['Close'], 
               color='green', marker='^', s=100, 
               label='Buy', zorder=5)
 
     # Plot sell signals
-    sell_signals = results_copy[results_copy['trade'] < 0]
+    sell_signals = results[results['trade'] < 0]
     ax.scatter(sell_signals.index, sell_signals['Close'], 
               color='red', marker='v', s=100, 
               label='Sell', zorder=5)
