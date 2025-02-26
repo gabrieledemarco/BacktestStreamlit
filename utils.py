@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import matplotlib.pyplot as plt
 import yfinance as yf
 import streamlit as st
 
@@ -85,136 +84,78 @@ def plot_drawdown(results):
     rolling_max = results['portfolio_value'].cummax()
     drawdowns = (results['portfolio_value'] - rolling_max) / rolling_max * 100
 
-    fig = go.Figure()
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.fill_between(results.index, drawdowns, 0, color='red', alpha=0.3)
+    ax.plot(results.index, drawdowns, color='red', linewidth=1)
 
-    fig.add_trace(go.Scatter(
-        x=results.index,
-        y=drawdowns,
-        fill='tozeroy',
-        name='Drawdown',
-        line=dict(color='red')
-    ))
+    ax.set_title('Portfolio Drawdown')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Drawdown (%)')
+    ax.grid(True, alpha=0.3)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
 
-    fig.update_layout(
-        title='Portfolio Drawdown',
-        xaxis_title='Date',
-        yaxis_title='Drawdown (%)',
-        template='plotly_white',
-        showlegend=True,
-        yaxis=dict(tickformat='.1f')
-    )
-
+    plt.tight_layout()
     return fig
 
 def plot_equity_curve(results):
     """Plot equity curve"""
-    fig = go.Figure()
+    fig, ax = plt.subplots(figsize=(12, 6))
 
-    fig.add_trace(go.Scatter(
-        x=results.index,
-        y=results['portfolio_value'],
-        mode='lines',
-        name='Portfolio Value',
-        line=dict(color='#17a2b8')
-    ))
+    # Plot portfolio value
+    ax.plot(results.index, results['portfolio_value'], 
+            label='Portfolio Value', color='#17a2b8', linewidth=2)
 
     # Add buy and hold comparison
     initial_price = results['Close'].iloc[0]
     initial_shares = results['portfolio_value'].iloc[0] / initial_price
     buy_hold = initial_shares * results['Close']
+    ax.plot(results.index, buy_hold, 
+            label='Buy & Hold', color='#666666', 
+            linestyle='--', linewidth=1)
 
-    fig.add_trace(go.Scatter(
-        x=results.index,
-        y=buy_hold,
-        mode='lines',
-        name='Buy & Hold',
-        line=dict(color='#666666', dash='dash')
-    ))
+    ax.set_title('Portfolio Value Over Time vs Buy & Hold')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Portfolio Value ($)')
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
 
-    fig.update_layout(
-        title='Portfolio Value Over Time vs Buy & Hold',
-        xaxis_title='Date',
-        yaxis_title='Portfolio Value ($)',
-        template='plotly_white'
-    )
-
+    plt.tight_layout()
     return fig
 
 def plot_trades(data, results, short_window, long_window):
     """Plot trading signals"""
-    fig = go.Figure()
+    fig, ax = plt.subplots(figsize=(12, 6))
 
-    # Plot price
-    fig.add_trace(go.Scatter(
-        x=data.index,
-        y=data['Close'],
-        mode='lines',
-        name='Close Price',
-        line=dict(color='#666666', width=1)
-    ))
-
-    # Plot moving averages
-    fig.add_trace(go.Scatter(
-        x=results.index,
-        y=results['SMA_short'],
-        mode='lines',
-        name=f'{short_window}d MA',
-        line=dict(color='#17a2b8', width=1.5)
-    ))
-
-    fig.add_trace(go.Scatter(
-        x=results.index,
-        y=results['SMA_long'],
-        mode='lines',
-        name=f'{long_window}d MA',
-        line=dict(color='#28a745', width=1.5)
-    ))
+    # Plot price and moving averages
+    ax.plot(data.index, data['Close'], 
+            label='Close Price', color='#666666', linewidth=1)
+    ax.plot(results.index, results['SMA_short'], 
+            label=f'{short_window}d MA', color='#17a2b8', linewidth=1.5)
+    ax.plot(results.index, results['SMA_long'], 
+            label=f'{long_window}d MA', color='#28a745', linewidth=1.5)
 
     # Plot buy signals
     buy_signals = results[results['trade'] > 0]
-    fig.add_trace(go.Scatter(
-        x=buy_signals.index,
-        y=buy_signals['Close'],
-        mode='markers',
-        name='Buy',
-        marker=dict(
-            color='green',
-            size=12,
-            symbol='triangle-up',
-            line=dict(color='darkgreen', width=1)
-        )
-    ))
+    ax.scatter(buy_signals.index, buy_signals['Close'], 
+              color='green', marker='^', s=100, 
+              label='Buy', zorder=5)
 
     # Plot sell signals
     sell_signals = results[results['trade'] < 0]
-    fig.add_trace(go.Scatter(
-        x=sell_signals.index,
-        y=sell_signals['Close'],
-        mode='markers',
-        name='Sell',
-        marker=dict(
-            color='red',
-            size=12,
-            symbol='triangle-down',
-            line=dict(color='darkred', width=1)
-        )
-    ))
+    ax.scatter(sell_signals.index, sell_signals['Close'], 
+              color='red', marker='v', s=100, 
+              label='Sell', zorder=5)
 
-    fig.update_layout(
-        title='Trading Signals',
-        xaxis_title='Date',
-        yaxis_title='Price ($)',
-        template='plotly_white',
-        height=600,
-        showlegend=True,
-        legend=dict(
-            yanchor="top",
-            y=0.99,
-            xanchor="left",
-            x=0.01,
-            bgcolor='rgba(255, 255, 255, 0.8)'
-        ),
-        margin=dict(l=50, r=50, t=50, b=50)
-    )
+    ax.set_title('Trading Signals')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Price ($)')
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
 
+    plt.tight_layout()
     return fig

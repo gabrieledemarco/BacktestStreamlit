@@ -1,7 +1,6 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from strategy import MovingAverageCrossover
 from backtest import Backtester
@@ -78,17 +77,17 @@ try:
         # Plot equity curve
         st.subheader("Equity Curve")
         fig_equity = plot_equity_curve(results)
-        st.plotly_chart(fig_equity, use_container_width=True)
+        st.pyplot(fig_equity)
 
         # Plot drawdown
         st.subheader("Portfolio Drawdown")
         fig_drawdown = plot_drawdown(results)
-        st.plotly_chart(fig_drawdown, use_container_width=True)
+        st.pyplot(fig_drawdown)
 
         # Plot trades
         st.subheader("Trading Signals")
         fig_trades = plot_trades(data, results, short_window, long_window)
-        st.plotly_chart(fig_trades, use_container_width=True)
+        st.pyplot(fig_trades)
 
         # Trade history
         st.subheader("Trade History")
