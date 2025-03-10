@@ -1,50 +1,40 @@
 import pandas as pd
 import numpy as np
+from utils import simulate_margin_trading
+
+
+def calculate_strategy_returns(df):
+    # Aggiungere una colonna per i ritorni della strategia
+    df['strategy_returns'] = df['portfolio_value'].pct_change()  # Calcola i ritorni percentuali giornalieri
+
+    # Aggiungere una colonna per i ritorni cumulativi
+    df['cumulative_returns'] = df['strategy_returns'].cumsum()  # Calcola i ritorni cumulativi
+
+    return df
+
 
 class Backtester:
-    def __init__(self, strategy, initial_capital):
+    def __init__(self, strategy, initial_capital, leverage, risk_fraction):
+        self.risk_fraction = risk_fraction
+        self.leverage = leverage
         self.strategy = strategy
         self.initial_capital = initial_capital
 
+    def kelly_position_size(self, win_rate, win_loss_ratio):
+        """Calcola la dimensione della posizione usando il Kelly Criterion"""
+        kelly_fraction = (win_rate * win_loss_ratio - (1 - win_rate)) / win_loss_ratio
+        return kelly_fraction
+
     def run(self, data):
-        """Run backtest on the given data"""
-        # Generate signals
         df = self.strategy.generate_signals(data)
+        print(df)
 
-        # Initialize portfolio columns
-        df['shares'] = 0.0
-        df['cash'] = self.initial_capital
-        df['holdings'] = 0.0
-        df['portfolio_value'] = self.initial_capital
+        df_res = self.strategy.apply_stop_loss_take_profit()
+        print("--------------------EVOLUAZIONE CAPITLE--------------")
+        df_capital = simulate_margin_trading(orders=df_res,
+                                             price_history=data['Close'],
+                                             initial_capital=self.initial_capital,
+                                             leverage=self.leverage,
+                                             risk_fraction=self.risk_fraction)
+        return df_res, df_capital
 
-        # Calculate conservative position size (25% of capital)
-        position_size = self.initial_capital * 0.25
-
-        # Process trades sequentially
-        for i in range(1, len(df)):
-            current_price = float(df['Close'].iloc[i])
-            trade_signal = float(df['trade'].iloc[i])
-
-            # Calculate shares for new positions
-            if abs(trade_signal) > 0:
-                if trade_signal > 0:  # Buy
-                    new_shares = np.floor(position_size / current_price)
-                    df.iloc[i, df.columns.get_loc('shares')] = new_shares
-                    df.iloc[i, df.columns.get_loc('cash')] = df['cash'].iloc[i-1] - (new_shares * current_price)
-                else:  # Sell
-                    df.iloc[i, df.columns.get_loc('shares')] = 0
-                    df.iloc[i, df.columns.get_loc('cash')] = df['cash'].iloc[i-1] + (df['shares'].iloc[i-1] * current_price)
-            else:
-                # Maintain previous position
-                df.iloc[i, df.columns.get_loc('shares')] = df['shares'].iloc[i-1]
-                df.iloc[i, df.columns.get_loc('cash')] = df['cash'].iloc[i-1]
-
-            # Update holdings and portfolio value
-            df.iloc[i, df.columns.get_loc('holdings')] = df['shares'].iloc[i] * current_price
-            df.iloc[i, df.columns.get_loc('portfolio_value')] = df['holdings'].iloc[i] + df['cash'].iloc[i]
-
-        # Calculate returns
-        df['returns'] = df['portfolio_value'].pct_change()
-        df['strategy_returns'] = df['returns'].fillna(0)
-
-        return df
