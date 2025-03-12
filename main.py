@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from strategy import MovingAverageCrossover, MeanReversion, IchimokuStrategy, ARIMAStrategy
 from backtest import Backtester
 from utils import calculate_metrics, plot_equity_curve, get_stock_symbols, plot_drawdown, simulate_margin_trading, \
-    simulate_portfolio, calculate_return_metrics, plot_return_distribution
+    simulate_portfolio, calculate_return_metrics, plot_return_distribution, calculate_trading_metrics
 
 import pandas as pd
 
@@ -137,21 +137,32 @@ try:
         with col14:
             st.metric("Kurt", f"{stat_met['Kurtosis']:.2f}")
 
+        col1, col2 = st.columns(2)
+
+        with col1:
+            # Plot equity curve
+            fig_equity = plot_equity_curve(df_capital)
+            st.pyplot(fig_equity)
+        with col2:
+            # Plot trades
+            fig, ax = strategy.plot_trades()
+            st.pyplot(fig)
+
+
+        col1, col2 = st.columns(2)
         # Plot equity curve
-        st.subheader("Equity Curve")
-        fig_equity = plot_equity_curve(df_capital)
-        st.pyplot(fig_equity)
+        with col1:
+            # Plot drawdown
 
-        # Plot drawdown
-        st.subheader("Portfolio Drawdown")
+            fig_drawdown = plot_drawdown(df_capital)
+            st.pyplot(fig_drawdown)
+        with col2:
+            # Plot drawdown
+            #st.subheader("Trading Returns")
+            fig, ax = plot_return_distribution(df_capital)
+            st.pyplot(fig)
 
-        fig_drawdown = plot_drawdown(df_capital)
-        st.pyplot(fig_drawdown)
 
-        # Plot trades
-        st.subheader("Trading Signals")
-        fig, ax = strategy.plot_trades()
-        st.pyplot(fig)
 
         # Trade history
         st.subheader("Trade History")
@@ -172,9 +183,13 @@ try:
                           'Position_Size', 'Free_Capital', 'Portfolio_Value', 'Capital_At_Leverage', 'strategy_returns',
                           'cumulative_returns']])
 
-        st.subheader("Trading Returns")
-        fig, ax = plot_return_distribution(df_capital)
-        st.pyplot(fig)
+
+        # Calcolare le metriche
+        metrics = calculate_trading_metrics(df_capital)
+
+
+
+
 
 except Exception as e:
     st.error(f"An error occurred: {str(e)}")
