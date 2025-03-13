@@ -33,7 +33,7 @@ with st.sidebar.container(border=1):
         help="Type to search for available symbols",
 disabled = False 
     )
-    symbol = symbol_dict.get(symbol_option, "SPY") # if #symbol_option else "SPY"
+    symbol = symbol_dict.get(symbol_option, "SPY")  if symbol_option else "SPY"
 
     col1, col2 = st.columns(2)
     with col1:
