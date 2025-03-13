@@ -3,9 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from TradingStrategy import TradeManager
 from statsmodels.tsa.arima.model import ARIMA
-import warnings
+#import warnings
 
-warnings.filterwarnings("ignore", category=UserWarning, module="statsmodels")
+#warnings.filterwarnings("ignore", #category=UserWarning, module="statsmodels")
 
 
 class MovingAverageCrossover:
