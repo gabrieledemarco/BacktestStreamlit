@@ -1,4 +1,4 @@
-version = 1
+oversion = 1
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -1295,14 +1295,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/09/05/28664524fcc67c078313d482bf25fe403e9399130622cfc89e185ec0abf6/yfinance-0.2.54-py2.py3-none-any.whl", hash = "sha256:8754f90332158d5d19bf754c1b230864ca2d1d313182a3f94a7bc7718bbe7d90", size = 108707 },
 ]
 
-
 [[package]]
 name = "statsmodels"
 version = "0.13.5"
 source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "scipy" },
-    { name = "patsy"},]
-sdist = { url = "https://files.pythonhosted.org/packages/source/s/statsmodels/statsmodels-0.13.2.tar.gz" },]
+sdist = { url = "https://files.pythonhosted.org/packages/5f/8a/20f6c02ecf88a34582b264b4bb60e7a4da6b4f6d4096cf0343409b7d421f/statsmodels-0.13.5.tar.gz", hash = "sha256:...hash...", size = 2000000 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/72/36/7b8f9a9cfce9bdecd2182d71d0159e312c85ac8fd78a0158f4f3b3b2383d/statsmodels-0.13.5-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:...hash...", size = 3000000 },
+]
