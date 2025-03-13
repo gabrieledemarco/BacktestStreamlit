@@ -21,7 +21,7 @@ def get_stock_symbols():
     for asset_class, file in files.items():
         # Ottieni il percorso completo relativo alla cartella corrente
         file_path = os.path.join(os.getcwd(), file)
-
+        print(file_path)
         # Verifica se il file esiste nella directory
         if os.path.exists(file_path):
             with open(file_path, "r") as f:
