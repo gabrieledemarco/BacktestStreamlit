@@ -31,7 +31,7 @@ with st.sidebar.container(border=1):
         options=list(symbol_dict.keys()),
         index=0 if symbol_dict else None,
         help="Type to search for available symbols",
-disabled = True
+disabled = False
     )
     symbol = symbol_dict.get(symbol_option, "SPY")  if symbol_option else "SPY"
 
