@@ -20,7 +20,7 @@ st.title("Trading Strategy Backtester")
 # Get available stock symbols
 symbols = get_stock_symbols()
 symbol_dict = {f"{symbol} - {name}": symbol for symbol, name in symbols}
-
+print(symbol_djct)
 # Sidebar inputs
 st.sidebar.header("Strategy Parameters")
 
