@@ -42,7 +42,8 @@ with st.sidebar.container(border=1):
 
     # Timeframes supportati da Yahoo Finance
     timeframes = ['1m', '5m', '15m', '30m', '1h', '1d', '1wk', '1mo', '3mo']
-    interval = st.selectbox("Seleziona il time frame", timeframes,'1d') #Default a 1 giorno ('1d')
+   interval = st.selectbox("Seleziona il time frame", timeframes, index=timeframes.index('1d')) 
+#interval = st.selectbox("Seleziona il time frame", timeframes,'1d') #Default a 1 giorno ('1d')
 
 with st.sidebar.container(border=1):
     # Strategy selection
