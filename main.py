@@ -1,11 +1,10 @@
 import streamlit as st
 import yfinance
-import yfinance as yf
 from datetime import datetime, timedelta
 from strategy import MovingAverageCrossover, MeanReversion, IchimokuStrategy, ARIMAStrategy
 from backtest import Backtester
-from utils import calculate_metrics, plot_equity_curve, get_stock_symbols, plot_drawdown, simulate_margin_trading, \
-    simulate_portfolio, calculate_return_metrics, plot_return_distribution
+from utils import calculate_metrics, plot_equity_curve, get_stock_symbols, plot_drawdown, \
+    calculate_return_metrics, plot_return_distribution
 
 import pandas as pd
 
@@ -31,9 +30,9 @@ with st.sidebar.container(border=1):
         options=list(symbol_dict.keys()),
         index=0 if symbol_dict else None,
         help="Type to search for available symbols",
-disabled = False
+        disabled=False
     )
-    symbol = symbol_dict.get(symbol_option, "SPY")  if symbol_option else "SPY"
+    symbol = symbol_dict.get(symbol_option, "SPY") if symbol_option else "SPY"
 
     col1, col2 = st.columns(2)
     with col1:
@@ -56,9 +55,9 @@ with st.sidebar.container(border=1):
 
     col11, col12 = st.columns(2)
     with col11:
-        take_profit = st.number_input("Take Profit (%)", value=3.0)
+        take_profit = st.number_input("Take Profit (%)", value=0.3)
     with col12:
-        stop_loss = st.number_input("Stop Loss (%)", value=2.0)
+        stop_loss = st.number_input("Stop Loss (%)", value=0.2)
 
     take_profit = float(take_profit) / 100  # if take_profit else 0.03
     stop_loss = float(stop_loss) / 100  # if stop_loss else 0.02
@@ -81,9 +80,9 @@ with st.sidebar.container(border=1):
         strategy = IchimokuStrategy(take_profit=take_profit,
                                     stop_loss=stop_loss)
     elif strategy_option == "Arima":
-        p = st.slider('Parametro p (AutoRegressive)', min_value=0, max_value=5, value=1)
-        d = st.slider('Parametro d (Differencing)', min_value=0, max_value=2, value=1)
-        q = st.slider('Parametro q (Moving Average)', min_value=0, max_value=5, value=1)
+        p = st.slider('Parametro p (AutoRegressive)', min_value=0, max_value=5, value=0)
+        d = st.slider('Parametro d (Differencing)', min_value=0, max_value=2, value=0)
+        q = st.slider('Parametro q (Moving Average)', min_value=0, max_value=5, value=0)
         strategy = ARIMAStrategy(p=p,
                                  d=d,
                                  q=q,
