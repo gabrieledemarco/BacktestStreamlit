@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from utils import calculate_atr, calculate_sl_tp
 
+
 class TradeResult:
     def __init__(self, action, entry_price, exit_price, return_value, return_percentage, date, exit_type,
                  exit_price_detail):
@@ -124,22 +125,22 @@ class PositionManager:
         return_value = 0
         return_percentage = 0
 
-        if action == 'Buy': # Se Action è Buy => stiamo chiudendo un Sell
+        if action == 'Buy':  # Se Action è Buy => stiamo chiudendo un Sell
             if reason == 'Take Profit':
-                close_price = self.entry_price * (1 - take_profit)   #calcolo prezzo take profit
+                close_price = self.entry_price * (1 - take_profit)  # calcolo prezzo take profit
             if reason == 'Stop Loss':
-                close_price = self.entry_price * (1 + stop_loss)     #calcolo prezzo stop loss
+                close_price = self.entry_price * (1 + stop_loss)  # calcolo prezzo stop loss
             if reason == 'Close':
                 close_price = close_price
 
             return_value = self.entry_price - close_price
             return_percentage = (self.entry_price - close_price) / self.entry_price
 
-        if action == 'Sell': # Se Action è Sell => stiamo chiudendo un Buy
+        if action == 'Sell':  # Se Action è Sell => stiamo chiudendo un Buy
             if reason == 'Take Profit':
-                close_price = self.entry_price * (1 + take_profit)  #calcolo prezzo take profit
+                close_price = self.entry_price * (1 + take_profit)  # calcolo prezzo take profit
             if reason == 'Stop Loss':
-                close_price = self.entry_price * (1 - stop_loss)    #calcolo prezzo stop loss
+                close_price = self.entry_price * (1 - stop_loss)  # calcolo prezzo stop loss
             if reason == 'Close':
                 close_price = close_price
             return_value = close_price - self.entry_price  # close a chiusura strategia

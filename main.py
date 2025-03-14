@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from strategy import MovingAverageCrossover, MeanReversion, IchimokuStrategy, ARIMAStrategy
 from backtest import Backtester
 from utils import calculate_metrics, plot_equity_curve, get_stock_symbols, plot_drawdown, \
-    calculate_return_metrics, plot_return_distribution
+    calculate_return_metrics, plot_return_distribution, calcola_metriche_trade
 
 import pandas as pd
 
@@ -42,7 +42,8 @@ with st.sidebar.container(border=1):
 
     # Timeframes supportati da Yahoo Finance
     timeframes = ['1m', '5m', '15m', '30m', '1h', '1d', '1wk', '1mo', '3mo']
-    interval = st.selectbox("Seleziona il time frame", timeframes)  # Default a 1 giorno ('1d')
+    interval = st.selectbox("Seleziona il time frame", timeframes,
+                            index=timeframes.index('1d'))  # Default a 1 giorno ('1d')
 
 with st.sidebar.container(border=1):
     # Strategy selection
@@ -52,15 +53,26 @@ with st.sidebar.container(border=1):
         "Ichimoku Strategy",
         "Arima"
     ])
-
     col11, col12 = st.columns(2)
     with col11:
-        take_profit = st.number_input("Take Profit (%)", value=0.3)
+        flag_atr = st.checkbox(label="ATR")
     with col12:
-        stop_loss = st.number_input("Stop Loss (%)", value=0.2)
+        tp_sl = st.checkbox(label="TP/SL")
 
-    take_profit = float(take_profit) / 100  # if take_profit else 0.03
-    stop_loss = float(stop_loss) / 100  # if stop_loss else 0.02
+    take_profit = None  # if take_profit else 0.03
+    stop_loss = None  #
+    if tp_sl:
+        col11, col12 = st.columns(2)
+        with col11:
+            take_profit = st.number_input("Take Profit (%)", value=0.3)
+        with col12:
+            stop_loss = st.number_input("Stop Loss (%)", value=0.2)
+
+            take_profit = float(take_profit) / 100  # if take_profit else 0.03
+            stop_loss = float(stop_loss) / 100  # if stop_loss else 0.02
+
+    if flag_atr:
+        risk_rew_atr = st.number_input(label="Risk Reward", min_value=1,max_value=10 )
 
     # Strategy-specific parameters
     if strategy_option == "Moving Average Crossover":
@@ -89,7 +101,7 @@ with st.sidebar.container(border=1):
                                  take_profit=take_profit,
                                  stop_loss=stop_loss)
 
-initial_capital = st.sidebar.number_input("Initial Capital ($)", value=100000.0)
+initial_capital = st.sidebar.number_input("Initial Capital ($)", value=1000.0)
 
 try:
     # Fetch data
@@ -125,7 +137,7 @@ try:
         with col3:
             st.metric("Max Drawdown", f"{metrics['max_drawdown']:.2f}%")
         with col4:
-            st.metric("Win Rate", f"{metrics['win_rate']:.2f}%")
+            st.metric("Daily Return Win Rate", f"{metrics['win_rate']:.2f}%")
         col11, col12, col13, col14 = st.columns(4)
         with col11:
             st.metric("Mean Return", f"{stat_met['Mean Return']:.6f}%")
@@ -175,5 +187,12 @@ try:
         fig, ax = plot_return_distribution(df_capital)
         st.pyplot(fig)
 
+        print(df_capital.columns)
+        print("===================================")
+        print("=========METRICHE SUI TRADE========")
+        print("===================================")
+        summary = calcola_metriche_trade(df_capital)
+        print("===================================")
+        st.table(summary)
 except Exception as e:
     st.error(f"An error occurred: {str(e)}")
