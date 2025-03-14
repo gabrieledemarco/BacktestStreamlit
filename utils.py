@@ -7,30 +7,28 @@ import os
 import numpy as np
 
 
+# File locali
+files = {
+    "stocks": "stocks.txt",
+    "forex": "forex.txt",
+    "crypto": "crypto.txt"
+}
+
 
 @st.cache_data(ttl=24 * 3600)  # Cache for 24 hours
 def get_stock_symbols():
     symbols = set()
 
-    # Dichiara i file nella tua directory
-    files = {
-        'stocks': 'stocks.txt',   # Nome del file per i simboli azionari
-        'forex': 'forex.txt'      # Nome del file per i cambi Forex
-    }
-
     for asset_class, file in files.items():
-        # Ottieni il percorso completo relativo alla cartella corrente
-        file_path = os.path.join(os.getcwd(), file)
-        print(file_path)
-        # Verifica se il file esiste nella directory
-        if os.path.exists(file_path):
-            with open(file_path, "r") as f:
+        if os.path.exists(file):
+            with open(file, "r") as f:
                 for line in f:
                     symbols.add((line.strip(), f"{asset_class.capitalize()} Asset"))
         else:
-            print(f"⚠️ File {file} non trovato. Assicurati che il file sia nel repository Git.")
+            print(f"⚠️ File {file} non trovato. Esegui 'download_symbols.py' prima di usare questa funzione.")
 
     return sorted(list(symbols), key=lambda x: x[0])
+
 
 
 
