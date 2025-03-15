@@ -185,8 +185,10 @@ try:
 
 
         # Calcolare le metriche
-        metrics = calculate_trading_metrics(df_capital)
+        metrics = calcola_metriche_trade(df_capital)
 
+
+st.table(metrics)
 
 
 
