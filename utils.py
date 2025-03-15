@@ -376,143 +376,73 @@ def calculate_sl_tp(entry_price, atr_value, risk_reward_ratio=2):
     return stop_loss, take_profit
 
 
-def calculate_trading_metrics(df):
-    # Aggiungere la colonna 'Label' in base all'azione (buy, sell, long, etc.)
-    df['Label'] = df['Action'].apply(lambda x: 'long' if x == 'Buy' else ('short' if x == 'Sell' else 'other'))
+def filtra_operazioni(df, action=None, exit_open=True):
+    """Filtra le operazioni in base all'azione (Buy/Sell) e al tipo di uscita."""
+    if exit_open:
+        return df[df['Exit Type'] == 'Open'] if action is None else df[
+            (df['Exit Type'] == 'Open') & (df['Action'] == action)]
+    return df[df['Exit Type'].isin(['Stop Loss', 'Take Profit', 'Close'])] if action is None else df[
+        (df['Exit Type'].isin(['Stop Loss', 'Take Profit', 'Close'])) & (df['Action'] == action)]
 
-    # Calcolare le metriche per ogni categoria
-    metrics = {
-        'Total': {},
-        'Buy': {},
-        'Sell': {}
-    }
+def conta_operazioni(df_trades):
+    return df_trades.shape[0]
 
-    # Funzione per calcolare le metriche per una determinata etichetta
-    def calculate_metrics_for_label(label_df, label_name):
-        label_df['Exit Price'] = label_df['Exit Price'].fillna(0)
+def conta_operazioni_vincenti(df_trades):
+    return df_trades[(df_trades['Exit Type'] == 'Take Profit') |
+                      ((df_trades['Exit Type'] == 'Close') & (df_trades['PL_Realized'] > 0))].shape[0]
 
-        print(label_df)
-        total_return = label_df['PL_Realized'].sum()  # Somma solo sui ritorni numerici
+def conta_operazioni_perdenti(df_trades):
+    return df_trades[(df_trades['Exit Type'] == 'Stop Loss') |
+                      ((df_trades['Exit Type'] == 'Close') & (df_trades['PL_Realized'] < 0))].shape[0]
 
-        if len(label_df[label_df['Exit Type']] == 'Open')  > 0:
-            average_return = label_df['PL_Realized']/ len(label_df[label_df['Exit Type']] == 'Open')  # Media dei ritorni
-        else:
-            average_return = 0
+def calcola_tasso_vincita(winning_trades, total_trades):
+    return (winning_trades / total_trades * 100) if total_trades > 0 else 0
 
-        win_rate = len(label_df[label_df['PL_Realized'] > 0]) / len(label_df) * 100  # Percentuale di trade vincenti
+def calcola_pnl(df_trades):
+    pnl_totale = round(df_trades['PL_Realized'].sum(), 2)
+    pnl_gain = round(df_trades[df_trades['PL_Realized'] > 0]['PL_Realized'].sum(), 2)
+    pnl_loss = round(df_trades[df_trades['PL_Realized'] < 0]['PL_Realized'].sum(), 2)
+    return pnl_totale, pnl_gain, pnl_loss
 
-        # Profit Factor
-        gain_sum = label_df[label_df['PL_Realized'] > 0]['PL_Realized'].fillna(0).sum()
-        loss_sum = abs(label_df[label_df['PL_Realized'] < 0]['PL_Realized'].fillna(0).sum())
-
-        profit_factor = np.where(loss_sum == 0, float('inf'), gain_sum / loss_sum)
-
-        # Numero di trade
-        num_trades = len(label_df)
-
-        average_gain = total_return / len(label_df[label_df['Exit Type']] == 'Open')  # if len(
-        # label_df[label_df['PL_Realized'] > 0]) > 0 else 0
-        average_loss = label_df[label_df['PL_Realized'] < 0]['PL_Realized'].mean()  # if len(
-        # label_df[label_df['PL_Realized'] < 0]) > 0 else 0
-        max_drawdown = label_df['PL_Realized'].min()  # Valore minimo come esempio di max drawdown
-
-
-        # Frazione di operazioni Long e Short
-        long_fraction = len(label_df[(label_df['Label'] == 'long') & (
-                label_df['Exit Type'] == 'Open')]) / num_trades if num_trades > 0 else 0
-        short_fraction = len(label_df[(label_df['Label'] == 'short') & (
-                label_df['Exit Type'] == 'Open')]) / num_trades if num_trades > 0 else 0
-
-        # Frazione di operazioni Take Profit e Stop Loss
-        take_profit_fraction = len(
-            label_df[label_df['Exit Type'] == 'Take Profit']) / num_trades if num_trades > 0 else 0
-        stop_loss_fraction = len(label_df[label_df['Exit Type'] == 'Stop Loss']) / num_trades if num_trades > 0 else 0
-
-        # Frazione di operazioni senza Take Profit né Stop Loss
-        no_exit_type_fraction = len(label_df[(label_df['Exit Type'] != 'Take Profit') & (
-                label_df['Exit Type'] != 'Stop Loss')]) / num_trades if num_trades > 0 else 0
-
-        # Frazione di operazioni Take Profit e Stop Loss per Buy
-        buy_take_profit_fraction = len(label_df[(label_df['Action'] == 'Buy') & (
-                label_df['Exit Type'] == 'Take Profit')]) / len(label_df[label_df['Action'] == 'Buy']) if len(
-            label_df[label_df['Action'] == 'Buy']) > 0 else 0
-        buy_stop_loss_fraction = len(label_df[(label_df['Action'] == 'Buy') & (
-                label_df['Exit Type'] == 'Stop Loss')]) / len(label_df[label_df['Action'] == 'Buy']) if len(
-            label_df[label_df['Action'] == 'Buy']) > 0 else 0
-
-        # Frazione di operazioni Take Profit e Stop Loss per Sell
-        sell_take_profit_fraction = len(label_df[(label_df['Action'] == 'Sell') & (
-                label_df['Exit Type'] == 'Take Profit')]) / len(label_df[label_df['Action'] == 'Sell']) if len(
-            label_df[label_df['Action'] == 'Sell']) > 0 else 0
-        sell_stop_loss_fraction = len(label_df[(label_df['Action'] == 'Sell') & (
-                label_df['Exit Type'] == 'Stop Loss')]) / len(label_df[label_df['Action'] == 'Sell']) if len(
-            label_df[label_df['Action'] == 'Sell']) > 0 else 0
-
-        # Aggiungere i dati al dizionario delle metriche
-        metrics[label_name] = {
-            'Total Return ($)': total_return,
-            'Average Return ($)': average_return,
-            'Win Rate (%)': win_rate,
-            'Average Gain ($)': average_gain,
-            'Average Loss ($)': average_loss,
-            'Max Drawdown ($)': max_drawdown,
-            'Profit Factor': profit_factor,
-            'Frazione Long': long_fraction * 100,
-            'Frazione Short': short_fraction * 100,
-            'Frazione Take Profit': take_profit_fraction * 100,
-            'Frazione Stop Loss': stop_loss_fraction * 100,
-            'Frazione senza Take Profit e Stop Loss': no_exit_type_fraction * 100,
-            'Frazione Take Profit Buy': buy_take_profit_fraction * 100,
-            'Frazione Stop Loss Buy': buy_stop_loss_fraction * 100,
-            'Frazione Take Profit Sell': sell_take_profit_fraction * 100,
-            'Frazione Stop Loss Sell': sell_stop_loss_fraction * 100
-        }
-
-    # Calcolare le metriche per "Total", "Buy" e "Sell"
-    calculate_metrics_for_label(df, 'Total')
-    calculate_metrics_for_label(df[df['Action'] == 'Buy'], 'Buy')
-    calculate_metrics_for_label(df[df['Action'] == 'Sell'], 'Sell')
-
-    # Convertire il dizionario in DataFrame
-    metrics_df = pd.DataFrame(metrics).T  # Trasporre per avere le metriche come righe
-
-    # Gestire eventuali NaN (Not a Number) e formattare i numeri in modo adeguato
-    metrics_df = metrics_df.fillna(0)  # Sostituisce NaN con 0 (oppure puoi usare un altro valore di default)
-
-    # Formattare le colonne numeriche come stringhe per la visualizzazione
-    for col in metrics_df.columns:
-        if metrics_df[col].dtype in ['float64', 'int64']:  # Se la colonna è numerica
-            metrics_df[col] = metrics_df[col].map(lambda x: f'{x:,.2f}')  # Formattazione a due decimali
-
-    # Visualizzazione delle metriche in formato DataFrame
-    st.dataframe(metrics_df)
-
-    # Creazione dei grafici
-    fig, ax = plt.subplots(2, 2, figsize=(12, 12))
-
-    # Grafico 1: Long vs Short Trade Fractions
-    ax[0, 0].pie([metrics_df.loc['Total', 'Frazione Long'], metrics_df.loc['Total', 'Frazione Short']],
-                 labels=['Long', 'Short'], autopct='%1.1f%%', startangle=90, colors=['#ff9999', '#66b3ff'])
-    ax[0, 0].set_title('Frazione di Trade Long vs Short')
-
-    # Grafico 2: Take Profit vs Stop Loss Fractions
-    ax[0, 1].pie([metrics_df.loc['Total', 'Frazione Take Profit'], metrics_df.loc['Total', 'Frazione Stop Loss']],
-                 labels=['Take Profit', 'Stop Loss'], autopct='%1.1f%%', startangle=90, colors=['#99ff99', '#ffcc99'])
-    ax[0, 1].set_title('Frazione di Take Profit vs Stop Loss')
-
-    # Grafico 3: Average Gain vs Average Loss Long
-    ax[1, 0].bar(['Average Gain Long', 'Average Loss Long'],
-                 [metrics_df.loc['Buy', 'Average Gain ($)'], metrics_df.loc['Buy', 'Average Loss ($)']],
-                 color=['#66b3ff', '#ff6666'])
-    ax[1, 0].set_title('Average Gain / Average Loss Long')
-
-    # Grafico 4: Average Gain vs Average Loss Short
-    ax[1, 1].bar(['Average Gain Short', 'Average Loss Short'],
-                 [metrics_df.loc['Sell', 'Average Gain ($)'], metrics_df.loc['Sell', 'Average Loss ($)']],
-                 color=['#66b3ff', '#ff6666'])
-    ax[1, 1].set_title('Average Gain / Average Loss Short')
-
-    plt.tight_layout()
-    st.pyplot(fig)
-
-    return metrics_df
+def calcola_metriche_trade(df):
+    """Calcola le metriche di trading per operazioni totali, long e short."""
+    df_trades_total = filtra_operazioni(df, exit_open=True)
+    total_trades = conta_operazioni(df_trades_total)
+    df_trades_total = filtra_operazioni(df, exit_open=False)
+    winning_trades = conta_operazioni_vincenti(df_trades_total)
+    losing_trades = conta_operazioni_perdenti(df_trades_total)
+    win_rate = calcola_tasso_vincita(winning_trades, total_trades)
+    pnl_totale, pnl_gain, pnl_loss = calcola_pnl(df_trades_total)
+    pnl_x_trade = round(pnl_totale / total_trades, 2) if total_trades > 0 else 0
+    gain_x_trade = round(pnl_gain / winning_trades, 2) if winning_trades > 0 else 0
+    loss_x_trade = round(pnl_loss / losing_trades, 2) if losing_trades > 0 else 0
+    
+    # Metriche per operazioni long
+    df_trades_long = filtra_operazioni(df, action='Buy', exit_open=False)
+    long_trades = conta_operazioni(df_trades_long)
+    long_winning_trades = conta_operazioni_vincenti(df_trades_long)
+    long_losing_trades = conta_operazioni_perdenti(df_trades_long)
+    long_win_rate = calcola_tasso_vincita(long_winning_trades, long_trades)
+    long_pnl_totale, long_pnl_gain, long_pnl_loss = calcola_pnl(df_trades_long)
+    
+    # Metriche per operazioni short
+    df_trades_short = filtra_operazioni(df, action='Sell', exit_open=False)
+    short_trades = conta_operazioni(df_trades_short)
+    short_winning_trades = conta_operazioni_vincenti(df_trades_short)
+    short_losing_trades = conta_operazioni_perdenti(df_trades_short)
+    short_win_rate = calcola_tasso_vincita(short_winning_trades, short_trades)
+    short_pnl_totale, short_pnl_gain, short_pnl_loss = calcola_pnl(df_trades_short)
+    
+    # Creazione del DataFrame dei risultati
+    risultati = pd.DataFrame({
+        'Metriche': ['Numero Totale Operazioni', 'Numero Operazioni Vincenti', 'Numero Operazioni Perdenti',
+                     'Tasso di Vincita', 'P&L Totale', 'P&L Gain', 'P&L Loss'],
+        'Total': [total_trades, winning_trades, losing_trades, f'{win_rate:.0f} %',
+                  pnl_totale, pnl_gain, pnl_loss],
+        'Long': [long_trades, long_winning_trades, long_losing_trades, f'{long_win_rate:.0f} %',
+                 long_pnl_totale, long_pnl_gain, long_pnl_loss],
+        'Short': [short_trades, short_winning_trades, short_losing_trades, f'{short_win_rate:.0f} %',
+                  short_pnl_totale, short_pnl_gain, short_pnl_loss]
+    })
+    
+    return risultati
