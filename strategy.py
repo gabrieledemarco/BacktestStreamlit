@@ -3,18 +3,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 from TradingStrategy import TradeManager
 from statsmodels.tsa.arima.model import ARIMA
-#import warnings
 
-#warnings.filterwarnings("ignore", #category=UserWarning, module="statsmodels")
+
+# import warnings
+
+# warnings.filterwarnings("ignore", #category=UserWarning, module="statsmodels")
 
 
 class MovingAverageCrossover:
-    def __init__(self, short_window, long_window, take_profit, stop_loss):
+    def __init__(self, short_window, long_window, trade_params):
         self.data = None
         self.short_window = short_window
         self.long_window = long_window
-        self.take_profit = take_profit  # 3% take profit
-        self.stop_loss = stop_loss  # 2% stop loss
+        self.take_profit = trade_params.get("Take Profit")  # 3% take profit
+        self.stop_loss = trade_params.get("Stop Loss")  # 2% stop loss
+        self.atr = trade_params.get("ATR")
+        self.trade_params = trade_params
+        self.trade_signals = None
+        self.trade_results_df = None
 
     def generate_signals(self, data):
         data.columns = data.columns.get_level_values(0)
@@ -48,25 +54,26 @@ class MovingAverageCrossover:
         print("----------------------------")
         self.data['trade'] = self.data['signal'].apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0))
         print(df)
+        self.trade_signals = df
         # self.data['trade'].apply(lambda x: 1 if x < 0 else -1)
         return df
 
     def apply_stop_loss_take_profit(self):
         """
         Applica la logica di Stop Loss e Take Profit ai trade generati.
+        trade_params: dict contenente "Take Profit", "Stop Loss" e "ATR".
         """
-        # Esempio di utilizzo
-
-        trade_manager = TradeManager(self.data, take_profit=self.take_profit,
-                                     stop_loss=self.stop_loss)
+        trade_manager = TradeManager(self.data, self.trade_params)
         trade_results_df = trade_manager.run()
+
         print("________TRADE__________________")
         print(trade_results_df)
+        self.trade_results_df = trade_results_df
         return trade_results_df
 
     def plot_trades(self):
-        df = self.generate_signals(self.data)
-        trade_results = self.apply_stop_loss_take_profit()
+        df = self.trade_signals
+        trade_results = self.trade_results_df
 
         # Crea un oggetto figura e un set di assi
         fig, ax = plt.subplots(figsize=(14, 7))
@@ -104,12 +111,16 @@ class MovingAverageCrossover:
 
 
 class MeanReversion:
-    def __init__(self, take_profit, stop_loss, window, z_score_threshold):
+    def __init__(self, window, z_score_threshold, trade_params):
         self.data = None
         self.window = window
         self.z_score_threshold = z_score_threshold
-        self.take_profit = take_profit
-        self.stop_loss = stop_loss
+        self.take_profit = trade_params.get("Take Profit")  # 3% take profit
+        self.stop_loss = trade_params.get("Stop Loss")  # 2% stop loss
+        self.atr = trade_params.get("ATR")
+        self.trade_params = trade_params
+        self.trade_signals = None
+        self.trade_results_df = None
 
     def generate_signals(self, data):
         data.columns = data.columns.get_level_values(0)
@@ -142,23 +153,25 @@ class MeanReversion:
         df['signal'] = np.where(df['z_score'] > self.z_score_threshold, -1,
                                 np.where(df['z_score'] < -self.z_score_threshold, 1, 0))
         df['trade'] = df['signal'].diff().fillna(0)
-
+        self.trade_signals = df
         return df
 
     def apply_stop_loss_take_profit(self):
         """
         Applica la logica di Stop Loss e Take Profit ai trade generati.
+        trade_params: dict contenente "Take Profit", "Stop Loss" e "ATR".
         """
-        # Esempio di utilizzo
-
-        trade_manager = TradeManager(self.data, take_profit=self.take_profit,
-                                     stop_loss=self.stop_loss)
+        trade_manager = TradeManager(self.data, self.trade_params)
         trade_results_df = trade_manager.run()
+
+        print("________TRADE__________________")
+        print(trade_results_df)
+        self.trade_results_df = trade_results_df
         return trade_results_df
 
     def plot_trades(self):
-        df = self.generate_signals(self.data)
-        trade_results = self.apply_stop_loss_take_profit()
+        df = self.trade_signals
+        trade_results = self.trade_results_df
 
         # Crea un oggetto figura e un set di assi
         fig, ax = plt.subplots(figsize=(14, 7))
@@ -195,14 +208,18 @@ class MeanReversion:
 
 
 class IchimokuStrategy:
-    def __init__(self, take_profit, stop_loss):
+    def __init__(self, trade_params):
         self.tenkan_window = 9
         self.kijun_window = 26
         self.senkou_span_b_window = 52
         self.chikou_span_window = 26
         self.data = None
-        self.take_profit = take_profit
-        self.stop_loss = stop_loss
+        self.take_profit = trade_params.get("Take Profit")  # 3% take profit
+        self.stop_loss = trade_params.get("Stop Loss")  # 2% stop loss
+        self.atr = trade_params.get("ATR")
+        self.trade_params = trade_params
+        self.trade_signals = None
+        self.trade_results_df = None
 
     def generate_signals(self, data):
         data.columns = data.columns.get_level_values(0)
@@ -227,24 +244,25 @@ class IchimokuStrategy:
         print("SEGNALI GENERATI")
         print("----------------------------")
         self.data['trade'] = self.data['signal'].apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0))
+        self.trade_signals = df
         return df
 
     def apply_stop_loss_take_profit(self):
         """
         Applica la logica di Stop Loss e Take Profit ai trade generati.
+        trade_params: dict contenente "Take Profit", "Stop Loss" e "ATR".
         """
-        # Esempio di utilizzo
-
-        trade_manager = TradeManager(self.data, take_profit=self.take_profit,
-                                     stop_loss=self.stop_loss)
+        trade_manager = TradeManager(self.data, self.trade_params)
         trade_results_df = trade_manager.run()
+
         print("________TRADE__________________")
         print(trade_results_df)
+        self.trade_results_df = trade_results_df
         return trade_results_df
 
     def plot_trades(self):
-        df = self.generate_signals(self.data)
-        trade_results = self.apply_stop_loss_take_profit()
+        df = self.trade_signals
+        trade_results = self.trade_results_df
         df['Tenkan-sen'] = (df['High'].rolling(window=9).max() + df['Low'].rolling(window=9).min()) / 2
 
         # Kijun-sen (26 periodi)
@@ -308,7 +326,7 @@ class IchimokuStrategy:
 
 
 class ARIMAStrategy:
-    def __init__(self, p, d, q, take_profit, stop_loss):
+    def __init__(self, p, d, q, trade_params):
         """
         Inizializza i parametri del modello ARIMA e le impostazioni di trading.
 
@@ -320,8 +338,12 @@ class ARIMAStrategy:
         self.p = p
         self.d = d
         self.q = q
-        self.take_profit = take_profit
-        self.stop_loss = stop_loss
+        self.take_profit = trade_params.get("Take Profit")  # 3% take profit
+        self.stop_loss = trade_params.get("Stop Loss")  # 2% stop loss
+        self.atr = trade_params.get("ATR")
+        self.trade_params = trade_params
+        self.trade_signals = None
+        self.trade_results_df = None
 
     def generate_signals(self, data):
         """
@@ -356,14 +378,14 @@ class ARIMAStrategy:
         df['forecast'] = np.nan
 
         # Previsione in-sample dei log returns usando una finestra scorrevole
-        #for t in range(self.p+1, len(df)):  # Si parte da self.p per garantire dati sufficienti
+        # for t in range(self.p+1, len(df)):  # Si parte da self.p per garantire dati sufficienti
         #    print(df['log_return'][:t])
         #    model = ARIMA(df['log_return'][:t], order=(self.p, self.d, self.q))
         #    model_fit = model.fit()
         #    forecast = model_fit.forecast(steps=1)[0]
         #    print(forecast)
         #    df.iloc[t, df.columns.get_loc('forecast')] = forecast
-            # Previsione in-sample della serie storica
+        # Previsione in-sample della serie storica
 
         model = ARIMA(df['log_return'], order=(self.p, self.d, self.q))
         model_fit = model.fit()
@@ -375,20 +397,25 @@ class ARIMAStrategy:
         # Genera segnali di trading in base al log return previsto
         df['signal'] = np.where(df['forecast'] > 0, 1, -1)  # 1 per positivo, -1 per negativo
         df['trade'] = df['signal']
-
+        self.trade_signals = df
         return df
 
     def apply_stop_loss_take_profit(self):
         """
         Applica la logica di Stop Loss e Take Profit ai trade generati.
+        trade_params: dict contenente "Take Profit", "Stop Loss" e "ATR".
         """
-        trade_manager = TradeManager(self.data, take_profit=self.take_profit, stop_loss=self.stop_loss)
+        trade_manager = TradeManager(self.data, self.trade_params)
         trade_results_df = trade_manager.run()
+
+        print("________TRADE__________________")
+        print(trade_results_df)
+        self.trade_results_df = trade_results_df
         return trade_results_df
 
     def plot_trades(self):
-        df = self.generate_signals(self.data)
-        trade_results = self.apply_stop_loss_take_profit()
+        df = self.trade_signals
+        trade_results = self.trade_results_df
 
         # Crea un oggetto figura e un set di assi
         fig, ax = plt.subplots(figsize=(14, 7))

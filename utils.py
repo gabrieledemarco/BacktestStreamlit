@@ -219,7 +219,7 @@ def simulate_margin_trading(orders, price_history, initial_capital=10000, levera
         # ✅ Calcoliamo il valore totale del portafoglio
         portfolio_value = capital + unrealized_pl
         capital_at_leverage = capital * leverage
-        free_capital = capital - invested_capital  # Capitale disponibile per nuovi trade
+        free_capital = capital_at_leverage - invested_capital  # Capitale disponibile per nuovi trade
 
         # Aggiorniamo il DataFrame
         df.at[i, 'Capital'] = capital
@@ -237,7 +237,7 @@ def simulate_margin_trading(orders, price_history, initial_capital=10000, levera
     return df
 
 
-def simulate_portfolio(price_history, orders, initial_cash=10000, p=0.5):
+def simulate_portfolio(price_history, orders, initial_cash=10000, p=0.05):
     # ✅ Convertiamo Date in datetime
     orders['Date'] = pd.to_datetime(orders['Date'])
 
@@ -367,18 +367,39 @@ def calculate_atr(df, period=14):
     return df
 
 
-def calculate_sl_tp(entry_price, atr_value, risk_reward_ratio=2):
+def calculate_sl_tp(entry_price, atr_value, flag, risk_reward_ratio=2, ):
     """
     Calcola Stop Loss e Take Profit usando ATR.
 
+    :param flag: Buy or Sell
     :param entry_price: Prezzo di ingresso della posizione
     :param atr_value: Valore dell'ATR corrente
     :param risk_reward_ratio: Rapporto rischio/rendimento (default 2:1)
     :return: Tuple (stop_loss, take_profit)
     """
-    stop_loss = entry_price - atr_value
-    take_profit = entry_price + (atr_value * risk_reward_ratio)
+    stop_loss = None
+    take_profit = None
+    print("Compute TP/SL for:")
+    print("Entry: ", entry_price)
+    print("Flag: ",flag)
+    print("RR: ", risk_reward_ratio)
+    print("ATR: ", atr_value)
 
+    if flag == 'Buy':
+        print("-----flag is BUY------")
+        stop_loss = atr_value/entry_price
+        take_profit = (atr_value * risk_reward_ratio)/entry_price
+        print("ENTRY: ", entry_price)
+        print("TP: ", take_profit)
+        print("SL: ", stop_loss)
+
+    if flag == 'Sell':
+        print("-----flag is Sell------")
+        stop_loss =  atr_value/entry_price
+        take_profit = (atr_value * risk_reward_ratio)/entry_price
+        print("ENTRY: ",entry_price)
+        print("TP: ",take_profit)
+        print("SL: ", stop_loss)
     return stop_loss, take_profit
 
 

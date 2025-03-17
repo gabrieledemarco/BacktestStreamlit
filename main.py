@@ -71,26 +71,35 @@ with st.sidebar.container(border=1):
             take_profit = float(take_profit) / 100  # if take_profit else 0.03
             stop_loss = float(stop_loss) / 100  # if stop_loss else 0.02
 
+    risk_rew_atr = None
     if flag_atr:
-        risk_rew_atr = st.number_input(label="Risk Reward", min_value=1,max_value=10 )
+        risk_rew_atr = st.number_input(label="Risk Reward", min_value=1, max_value=10)
+
+    trade_params = {
+        "Take Profit": take_profit,
+        "Stop Loss": stop_loss,
+        "ATR": flag_atr,  # Average True Range
+        "RR": risk_rew_atr
+    }
 
     # Strategy-specific parameters
     if strategy_option == "Moving Average Crossover":
         short_window = st.slider("Short MA Window", 5, 50, 20)
         long_window = st.slider("Long MA Window", 20, 200, 50)
-        strategy = MovingAverageCrossover(short_window, long_window, take_profit, stop_loss)
+        strategy = MovingAverageCrossover(short_window,
+                                          long_window,
+                                          trade_params)
 
     elif strategy_option == "Mean Reversion":
         window = st.slider("Lookback Window", 5, 50, 20)
         threshold = st.slider("Reversion Threshold", 1.0, 5.0, 2.0)
         strategy = MeanReversion(window=window,
                                  z_score_threshold=threshold,
-                                 take_profit=take_profit,
-                                 stop_loss=stop_loss)
+                                 trade_params=trade_params)
 
     elif strategy_option == "Ichimoku Strategy":
-        strategy = IchimokuStrategy(take_profit=take_profit,
-                                    stop_loss=stop_loss)
+        strategy = IchimokuStrategy(trade_params=trade_params)
+
     elif strategy_option == "Arima":
         p = st.slider('Parametro p (AutoRegressive)', min_value=0, max_value=5, value=0)
         d = st.slider('Parametro d (Differencing)', min_value=0, max_value=2, value=0)
@@ -98,11 +107,13 @@ with st.sidebar.container(border=1):
         strategy = ARIMAStrategy(p=p,
                                  d=d,
                                  q=q,
-                                 take_profit=take_profit,
-                                 stop_loss=stop_loss)
+                                 trade_params=trade_params)
 
-initial_capital = st.sidebar.number_input("Initial Capital ($)", value=1000.0)
-
+with st.sidebar.container(border=1):
+    initial_capital = st.number_input("Initial Capital ($)", value=1000.0)
+    leverage = st.slider("Levereage", 1, 100, 1)
+    posizion_size = st.text_input("Position Size", value=0.02)
+    posizion_size = float(posizion_size)
 try:
     # Fetch data
     # yf = YFinanceDownloader(symbol=symbol, start_date=start_date, end_date=end_date, interval=interval)
@@ -120,8 +131,8 @@ try:
         # Run backtest
         backtester = Backtester(strategy,
                                 initial_capital,
-                                leverage=2,
-                                risk_fraction=0.2)
+                                leverage=leverage,
+                                risk_fraction=posizion_size)
 
         [trade_results_df, df_capital] = backtester.run(data)
 
