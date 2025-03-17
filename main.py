@@ -191,7 +191,7 @@ try:
         )
         st.dataframe(df_capital[
                          ['Action', 'Exit Type', 'Price', 'Close', 'Qty', 'PL_Realized', 'PL_Unrealized',
-                          'Position_Size', 'Free_Capital', 'Portfolio_Value', 'Capital_At_Leverage', 'strategy_returns',
+                          'Position_Size', 'Free_Capital', 'Portfolio_Value','Portfolio_Value_Real', 'Capital_At_Leverage', 'strategy_returns',
                           'cumulative_returns']])
 
         st.subheader("Trading Returns")

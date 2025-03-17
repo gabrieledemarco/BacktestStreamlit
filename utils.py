@@ -113,6 +113,9 @@ def plot_equity_curve(results):
                          0] / initial_price  # Numero di azioni acquistate con il valore iniziale del portafoglio
     buy_hold = initial_shares * results['Close']  # Calcolare il valore della strategia Buy & Hold
 
+    ax.plot(results.index, results['Portfolio_Value_Real'],
+            label='Portfolio Real Value', color='lightgrey', linestyle='-.', linewidth=1)
+
     # Aggiungere il grafico della strategia Buy & Hold
     ax.plot(results.index, buy_hold,
             label='Buy & Hold', color='#666666', linestyle='--', linewidth=1)
@@ -171,6 +174,7 @@ def simulate_margin_trading(orders, price_history, initial_capital=10000, levera
     df['PL_Realized'] = 0.0
     df['PL_Unrealized'] = 0.0
     df['Portfolio_Value'] = initial_capital
+    df['Portfolio_Value_Real'] = initial_capital
     df['Capital_At_Leverage'] = initial_capital * leverage
     df['Position_Size'] = 0.0
     df['Open_Position'] = None
@@ -218,6 +222,7 @@ def simulate_margin_trading(orders, price_history, initial_capital=10000, levera
 
         # ✅ Calcoliamo il valore totale del portafoglio
         portfolio_value = capital + unrealized_pl
+        portfolio_value_real = capital + realized_pl
         capital_at_leverage = capital * leverage
         free_capital = capital_at_leverage - invested_capital  # Capitale disponibile per nuovi trade
 
@@ -225,6 +230,7 @@ def simulate_margin_trading(orders, price_history, initial_capital=10000, levera
         df.at[i, 'Capital'] = capital
         df.at[i, 'PL_Realized'] = realized_pl
         df.at[i, 'PL_Unrealized'] = unrealized_pl
+        df.at[i, 'Portfolio_Value_Real'] = portfolio_value_real
         df.at[i, 'Portfolio_Value'] = portfolio_value
         df.at[i, 'Capital_At_Leverage'] = capital_at_leverage
         df.at[i, 'Position_Size'] = position_size if open_position else 0
@@ -321,31 +327,43 @@ def calculate_return_metrics(df):
 
 
 def plot_return_distribution(df):
-    """Analizza e visualizza la distribuzione dei rendimenti del portafoglio"""
+    """Analizza e visualizza la distribuzione dei rendimenti del portafoglio in due subplot orizzontali"""
     # Calcoliamo i rendimenti giornalieri
     df['returns'] = df['Portfolio_Value'].pct_change()  # pct_change() calcola la variazione percentuale giornaliera
     df['bh_returns'] = df['Close'].pct_change()
     # Rimuoviamo eventuali valori NaN creati dalla differenza
     df = df.dropna(subset=['returns'])
 
-    # Visualizziamo la distribuzione dei rendimenti con un istogramma
-    fig, ax = plt.subplots()
-    # ax.scatter([1, 2, 3], [1, 2, 3])
-    plt.hist(df['returns'], bins=30, color='skyblue', edgecolor='black', alpha=0.7)
-    plt.hist(df['bh_returns'], bins=30, color='lightgrey', edgecolor='black', alpha=0.7)
-    plt.title('Return Distribution of Portfolio Value', fontsize=16)
-    plt.xlabel('Daily Return', fontsize=12)
-    plt.ylabel('Frequency', fontsize=12)
-    plt.grid(True, alpha=0.3)
+    # Creiamo due subplot orizzontali
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12))
+
+    # Istogramma dei rendimenti del portafoglio
+    ax1.hist(df['returns'], bins=30, color='skyblue', edgecolor='black', alpha=0.7)
+    ax1.set_title('Return Distribution of Portfolio Value', fontsize=16)
+    ax1.set_xlabel('Daily Return', fontsize=12)
+    ax1.set_ylabel('Frequency', fontsize=12)
+    ax1.grid(True, alpha=0.3)
 
     # Aggiungiamo una linea verticale per la media
-    plt.axvline(df['returns'].mean(), color='red', linestyle='dashed', linewidth=2,
+    ax1.axvline(df['returns'].mean(), color='red', linestyle='dashed', linewidth=2,
                 label=f'Mean Return: {df["returns"].mean():.4f}')
-    plt.legend()
+    ax1.legend()
 
+    # Istogramma dei rendimenti del benchmark
+    ax2.hist(df['bh_returns'], bins=30, color='lightgrey', edgecolor='black', alpha=0.7)
+    ax2.set_title('Return Distribution of Benchmark', fontsize=16)
+    ax2.set_xlabel('Daily Return', fontsize=12)
+    ax2.set_ylabel('Frequency', fontsize=12)
+    ax2.grid(True, alpha=0.3)
+
+    # Aggiungiamo una linea verticale per la media
+    ax2.axvline(df['bh_returns'].mean(), color='red', linestyle='dashed', linewidth=2,
+                label=f'Mean Return: {df["bh_returns"].mean():.4f}')
+    ax2.legend()
+
+    # Ottimizzazione del layout
     plt.tight_layout()
-    # plt.show()
-    return fig, ax
+    return fig, (ax1, ax2)
 
 
 def calculate_atr(df, period=14):
