@@ -1,3 +1,4 @@
+
 import streamlit as st
 import yfinance
 from datetime import datetime, timedelta
@@ -224,3 +225,4 @@ try:
         st.table(formatted_merged_var)
 except Exception as e:
     st.error(f"An error occurred: {str(e)}")
+
