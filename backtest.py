@@ -27,10 +27,10 @@ class Backtester:
 
     def run(self, data):
         df = self.strategy.generate_signals(data)
-        print(df)
+        #print(df)
 
         df_res = self.strategy.apply_stop_loss_take_profit()
-        print("--------------------EVOLUAZIONE CAPITLE--------------")
+        #print("--------------------EVOLUAZIONE CAPITLE--------------")
         df_capital = simulate_margin_trading(orders=df_res,
                                              price_history=data['Close'],
                                              initial_capital=self.initial_capital,

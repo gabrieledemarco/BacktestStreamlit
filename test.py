@@ -1,7 +1,21 @@
+
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
+
+# Esempio di dataset
+data = {
+    "Value": [None, None, None, None, None, 0.146606, 0.153035]
+}
+index = pd.date_range("2025-03-10 13:32", periods=7, freq="T", tz="UTC")
+df = pd.DataFrame(data, index=index)
+
+# Trova il primo valore non NaN
+first_non_nan_index = df["Value"].first_valid_index()
+
+print("Primo valore non NaN:", first_non_nan_index)
+=======
 # Funzione per calcolare le metriche
 def calculate_trading_metrics(df):
     # Calcolo delle metriche generali
@@ -131,3 +145,4 @@ st.write(f"**Total Return Long ($):** {metrics['Total Return Long ($)']:.2f}")
 st.write(f"**Total Return Short ($):** {metrics['Total Return Short ($)']:.2f}")
 st.write(f"**Total Loss Long ($):** {metrics['Total Loss Long ($)']:.2f}")
 st.write(f"**Total Loss Short ($):** {metrics['Total Loss Short ($)']:.2f}")
+

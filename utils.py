@@ -6,6 +6,11 @@ import streamlit as st
 import os
 import numpy as np
 
+pd.reset_option('display.max_rows')
+pd.reset_option('display.max_columns')
+pd.reset_option('display.max_colwidth')
+pd.reset_option('display.expand_frame_repr')
+
 # File locali
 files = {
     "stocks": "stocks.txt",
@@ -29,6 +34,61 @@ def get_stock_symbols():
     return sorted(list(symbols), key=lambda x: x[0])
 
 
+
+def calculate_cagr_from_df(df):
+    # Assicurati che l'indice sia un datetime
+    df.index = pd.to_datetime(df.index)
+
+    # Prendi il valore iniziale (primo Close) e il valore finale (ultimo Close)
+    start_value = df['Portfolio_Value'].iloc[0]
+    end_value = df['Portfolio_Value'].iloc[-1]
+
+    # Calcolare la durata in minuti tra la data di inizio e quella finale
+    start_time = df.index[0]
+    end_time = df.index[-1]
+    duration_minutes = (end_time - start_time).total_seconds() / 60
+
+    # Calcolare il total return (rendimento complessivo)
+    total_return = (end_value - start_value) / start_value
+
+    # Calcolare il CAGR usando la formula con i minuti
+    cagr = (1 + total_return) ** (duration_minutes / 390) - 1
+
+    return cagr
+def calculate_historical_var(df, column, confidence_levels=[0.95, 0.99]):
+    """
+    Calcola il Value at Risk (VaR) utilizzando il metodo storico per più livelli di confidenza
+    e restituisce un DataFrame separato con i risultati del VaR.
+
+    :param df: DataFrame contenente i dati storici
+    :param column: Nome della colonna contenente i dati dei prezzi (ad esempio, 'Portfolio_Value' o 'Close')
+    :param confidence_levels: Lista dei livelli di confidenza per il VaR (default [95%, 99%])
+
+    :return: Un DataFrame contenente i risultati del VaR per ciascun livello di confidenza
+    """
+    # Calcolare i rendimenti giornalieri
+    df['returns'] = df[column].pct_change()
+
+    # Rimuovere eventuali valori NaN
+    df = df.dropna(subset=['returns'])
+
+    # Ordinare i rendimenti in ordine crescente
+    sorted_returns = df['returns'].sort_values()
+
+    # Calcolare il VaR per ciascun livello di confidenza
+    var_values = {}
+    for confidence_level in confidence_levels:
+        var_percentile = (1 - confidence_level) * 100
+        var = sorted_returns.quantile(var_percentile / 100)
+        var_values[f'{int(confidence_level * 100)}%'] = var
+
+    # Creiamo un DataFrame con i risultati del VaR
+    var_df = pd.DataFrame(list(var_values.items()), columns=['Confidence Level', 'VaR'])
+
+    # Restituiamo il DataFrame con i risultati del VaR
+    return var_df
+
+
 def calculate_metrics(results):
     """Calculate performance metrics"""
     # Calcolo dei rendimenti giornalieri della strategia
@@ -41,7 +101,7 @@ def calculate_metrics(results):
     total_days = len(results)
     total_return = (results['Portfolio_Value'].iloc[-1] / results['Portfolio_Value'].iloc[0]) - 1
     annual_return = ((1 + total_return) ** (252 / total_days) - 1) * 100
-
+    cagr_return = calculate_cagr_from_df(results)
     # Daily returns volatility
     daily_vol = results['strategy_returns'].std() * np.sqrt(252)
 
@@ -60,8 +120,16 @@ def calculate_metrics(results):
     winning_trades = trades[trades['strategy_returns'] > 0]
     win_rate = (len(winning_trades) / len(trades)) * 100 if len(trades) > 0 else 0
 
+    #print("STATISTICS")
+    #print({
+    #    'annual_return': cagr_return*100,
+    #    'sharpe_ratio': sharpe_ratio,
+    #    'max_drawdown': max_drawdown,
+    #à    'win_rate': win_rate,
+    #à    'volatility': daily_vol * 100
+    #})
     return {
-        'annual_return': annual_return,
+        'annual_return': cagr_return*100,
         'sharpe_ratio': sharpe_ratio,
         'max_drawdown': max_drawdown,
         'win_rate': win_rate,
@@ -108,6 +176,9 @@ def plot_equity_curve(results):
                          0] / initial_price  # Numero di azioni acquistate con il valore iniziale del portafoglio
     buy_hold = initial_shares * results['Close']  # Calcolare il valore della strategia Buy & Hold
 
+    ax.plot(results.index, results['Portfolio_Value_Real'],
+            label='Portfolio Real Value', color='lightgrey', linestyle='-.', linewidth=1)
+
     # Aggiungere il grafico della strategia Buy & Hold
     ax.plot(results.index, buy_hold,
             label='Buy & Hold', color='#666666', linestyle='--', linewidth=1)
@@ -149,12 +220,12 @@ def simulate_margin_trading(orders, price_history, initial_capital=10000, levera
     """
 
     # ✅ Convertiamo le date e uniamo gli ordini con i prezzi
-    print("--------------------Convertiamo le date e uniamo gli ordini con i prezzi--------------")
+    #print("--------------------Convertiamo le date e uniamo gli ordini con i prezzi--------------")
     orders['Date'] = pd.to_datetime(orders['Date'])
 
-    print(orders)
+
     price_history = price_history.reset_index().rename(columns={'index': 'Date', 0: 'Close'})
-    print(price_history)
+    #print(price_history)
 
     if 'Datetime' in price_history.columns:
         price_history.rename(columns={'Datetime': 'Date'}, inplace=True)
@@ -166,6 +237,7 @@ def simulate_margin_trading(orders, price_history, initial_capital=10000, levera
     df['PL_Realized'] = 0.0
     df['PL_Unrealized'] = 0.0
     df['Portfolio_Value'] = initial_capital
+    df['Portfolio_Value_Real'] = initial_capital
     df['Capital_At_Leverage'] = initial_capital * leverage
     df['Position_Size'] = 0.0
     df['Open_Position'] = None
@@ -213,13 +285,15 @@ def simulate_margin_trading(orders, price_history, initial_capital=10000, levera
 
         # ✅ Calcoliamo il valore totale del portafoglio
         portfolio_value = capital + unrealized_pl
+        portfolio_value_real = capital + realized_pl
         capital_at_leverage = capital * leverage
-        free_capital = capital - invested_capital  # Capitale disponibile per nuovi trade
+        free_capital = capital_at_leverage - invested_capital  # Capitale disponibile per nuovi trade
 
         # Aggiorniamo il DataFrame
         df.at[i, 'Capital'] = capital
         df.at[i, 'PL_Realized'] = realized_pl
         df.at[i, 'PL_Unrealized'] = unrealized_pl
+        df.at[i, 'Portfolio_Value_Real'] = portfolio_value_real
         df.at[i, 'Portfolio_Value'] = portfolio_value
         df.at[i, 'Capital_At_Leverage'] = capital_at_leverage
         df.at[i, 'Position_Size'] = position_size if open_position else 0
@@ -232,7 +306,7 @@ def simulate_margin_trading(orders, price_history, initial_capital=10000, levera
     return df
 
 
-def simulate_portfolio(price_history, orders, initial_cash=10000, p=0.5):
+def simulate_portfolio(price_history, orders, initial_cash=10000, p=0.05):
     # ✅ Convertiamo Date in datetime
     orders['Date'] = pd.to_datetime(orders['Date'])
 
@@ -316,12 +390,22 @@ def calculate_return_metrics(df):
 
 
 def plot_return_distribution(df):
-    """Analizza e visualizza la distribuzione dei rendimenti del portafoglio"""
+    """Analizza e visualizza la distribuzione dei rendimenti del portafoglio in due subplot orizzontali"""
     # Calcoliamo i rendimenti giornalieri
     df['returns'] = df['Portfolio_Value'].pct_change()  # pct_change() calcola la variazione percentuale giornaliera
-
+    df['bh_returns'] = df['Close'].pct_change()
     # Rimuoviamo eventuali valori NaN creati dalla differenza
     df = df.dropna(subset=['returns'])
+
+    # Creiamo due subplot orizzontali
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12))
+
+    # Istogramma dei rendimenti del portafoglio
+    ax1.hist(df['returns'], bins=30, color='skyblue', edgecolor='black', alpha=0.7)
+    ax1.set_title('Return Distribution of Portfolio Value', fontsize=16)
+    ax1.set_xlabel('Daily Return', fontsize=12)
+    ax1.set_ylabel('Frequency', fontsize=12)
+    ax1.grid(True, alpha=0.3)
 
     # Visualizziamo la distribuzione dei rendimenti con un istogramma
     fig, ax = plt.subplots(figsize=(14, 7))
@@ -333,13 +417,25 @@ def plot_return_distribution(df):
     plt.grid(True, alpha=0.3)
 
     # Aggiungiamo una linea verticale per la media
-    plt.axvline(df['returns'].mean(), color='red', linestyle='dashed', linewidth=2,
+    ax1.axvline(df['returns'].mean(), color='red', linestyle='dashed', linewidth=2,
                 label=f'Mean Return: {df["returns"].mean():.4f}')
-    plt.legend()
+    ax1.legend()
 
+    # Istogramma dei rendimenti del benchmark
+    ax2.hist(df['bh_returns'], bins=30, color='lightgrey', edgecolor='black', alpha=0.7)
+    ax2.set_title('Return Distribution of Benchmark', fontsize=16)
+    ax2.set_xlabel('Daily Return', fontsize=12)
+    ax2.set_ylabel('Frequency', fontsize=12)
+    ax2.grid(True, alpha=0.3)
+
+    # Aggiungiamo una linea verticale per la media
+    ax2.axvline(df['bh_returns'].mean(), color='red', linestyle='dashed', linewidth=2,
+                label=f'Mean Return: {df["bh_returns"].mean():.4f}')
+    ax2.legend()
+
+    # Ottimizzazione del layout
     plt.tight_layout()
-    # plt.show()
-    return fig, ax
+    return fig, (ax1, ax2)
 
 
 def calculate_atr(df, period=14):
@@ -361,18 +457,39 @@ def calculate_atr(df, period=14):
     return df
 
 
-def calculate_sl_tp(entry_price, atr_value, risk_reward_ratio=2):
+def calculate_sl_tp(entry_price, atr_value, flag, risk_reward_ratio=2, ):
     """
     Calcola Stop Loss e Take Profit usando ATR.
 
+    :param flag: Buy or Sell
     :param entry_price: Prezzo di ingresso della posizione
     :param atr_value: Valore dell'ATR corrente
     :param risk_reward_ratio: Rapporto rischio/rendimento (default 2:1)
     :return: Tuple (stop_loss, take_profit)
     """
-    stop_loss = entry_price - atr_value
-    take_profit = entry_price + (atr_value * risk_reward_ratio)
+    stop_loss = None
+    take_profit = None
+    #print("Compute TP/SL for:")
+    #print("Entry: ", entry_price)
+    #print("Flag: ",flag)
+    #print("RR: ", risk_reward_ratio)
+    #print("ATR: ", atr_value)
 
+    if flag == 'Buy':
+        #print("-----flag is BUY------")
+        stop_loss = atr_value/entry_price
+        take_profit = (atr_value * risk_reward_ratio)/entry_price
+        #print("ENTRY: ", entry_price)
+        #print("TP: ", take_profit)
+        #print("SL: ", stop_loss)
+
+    if flag == 'Sell':
+        #print("-----flag is Sell------")
+        stop_loss =  atr_value/entry_price
+        take_profit = (atr_value * risk_reward_ratio)/entry_price
+        #print("ENTRY: ",entry_price)
+        #print("TP: ",take_profit)
+        #print("SL: ", stop_loss)
     return stop_loss, take_profit
 
 
@@ -384,7 +501,32 @@ def filtra_operazioni(df, action=None, exit_open=True):
     return df[df['Exit Type'].isin(['Stop Loss', 'Take Profit', 'Close'])] if action is None else df[
         (df['Exit Type'].isin(['Stop Loss', 'Take Profit', 'Close'])) & (df['Action'] == action)]
 
+
 def conta_operazioni(df_trades):
+    """Conta il numero totale di operazioni."""
+    return df_trades.shape[0]
+
+
+def conta_operazioni_vincenti(df_trades):
+    """Conta il numero di operazioni vincenti."""
+    return df_trades[(df_trades['Exit Type'] == 'Take Profit') |
+                     ((df_trades['Exit Type'] == 'Close') & (df_trades['PL_Realized'] > 0))].shape[0]
+
+
+def conta_operazioni_perdenti(df_trades):
+    """Conta il numero di operazioni perdenti."""
+    return df_trades[(df_trades['Exit Type'] == 'Stop Loss') |
+                     ((df_trades['Exit Type'] == 'Close') & (df_trades['PL_Realized'] < 0))].shape[0]
+
+
+def calcola_tasso_vincita(winning_trades, total_trades):
+    """Calcola il tasso di vincita."""
+    return (winning_trades / total_trades * 100) if total_trades > 0 else 0
+
+
+def calcola_pnl(df_trades):
+    """Calcola il P&L Totale, P&L Gain e P&L Loss."""
+=======def conta_operazioni(df_trades):
     return df_trades.shape[0]
 
 def conta_operazioni_vincenti(df_trades):
@@ -399,10 +541,12 @@ def calcola_tasso_vincita(winning_trades, total_trades):
     return (winning_trades / total_trades * 100) if total_trades > 0 else 0
 
 def calcola_pnl(df_trades):
+
     pnl_totale = round(df_trades['PL_Realized'].sum(), 2)
     pnl_gain = round(df_trades[df_trades['PL_Realized'] > 0]['PL_Realized'].sum(), 2)
     pnl_loss = round(df_trades[df_trades['PL_Realized'] < 0]['PL_Realized'].sum(), 2)
     return pnl_totale, pnl_gain, pnl_loss
+
 
 def calcola_metriche_trade(df):
     """Calcola le metriche di trading per operazioni totali, long e short."""
@@ -416,6 +560,50 @@ def calcola_metriche_trade(df):
     pnl_x_trade = round(pnl_totale / total_trades, 2) if total_trades > 0 else 0
     gain_x_trade = round(pnl_gain / winning_trades, 2) if winning_trades > 0 else 0
     loss_x_trade = round(pnl_loss / losing_trades, 2) if losing_trades > 0 else 0
+
+
+    # Long trades
+    df_trades_buy = filtra_operazioni(df, action='Buy', exit_open=True)
+    total_trades_buy = conta_operazioni(df_trades_buy)
+    df_trades_buy = filtra_operazioni(df, action='Sell', exit_open=False)
+    winning_trades_buy = conta_operazioni_vincenti(df_trades_buy)
+    losing_trades_buy = conta_operazioni_perdenti(df_trades_buy)
+    win_rate_buy = calcola_tasso_vincita(winning_trades_buy, total_trades_buy)
+    pnl_totale_buy, pnl_gain_buy, pnl_loss_buy = calcola_pnl(df_trades_buy)
+    pnl_x_trade_buy = round(pnl_totale_buy / total_trades_buy, 2) if total_trades_buy > 0 else 0
+    gain_x_trade_buy = round(pnl_gain_buy / winning_trades_buy, 2) if winning_trades_buy > 0 else 0
+    loss_x_trade_buy = round(pnl_loss_buy / losing_trades_buy, 2) if losing_trades_buy > 0 else 0
+
+    # Short trades
+    df_trades_sell = filtra_operazioni(df, action='Sell', exit_open=True)
+    total_trades_sell = conta_operazioni(df_trades_sell)
+    df_trades_sell = filtra_operazioni(df, action='Buy', exit_open=False)
+    winning_trades_sell = conta_operazioni_vincenti(df_trades_sell)
+    losing_trades_sell = conta_operazioni_perdenti(df_trades_sell)
+    win_rate_sell = calcola_tasso_vincita(winning_trades_sell, total_trades_sell)
+    pnl_totale_sell, pnl_gain_sell, pnl_loss_sell = calcola_pnl(df_trades_sell)
+    pnl_x_trade_sell = round(pnl_totale_sell / total_trades_sell, 2) if total_trades_sell > 0 else 0
+    gain_x_trade_sell = round(pnl_gain_sell / winning_trades_sell, 2) if winning_trades_sell > 0 else 0
+    loss_x_trade_sell = round(pnl_loss_sell / losing_trades_sell, 2) if losing_trades_sell > 0 else 0
+
+    # Creazione del DataFrame dei risultati
+    risultati = pd.DataFrame({
+        'Metriche': ['Numero Totale Operazioni',
+                     'Numero Operazioni Vincenti',
+                     'Numero Operazioni Perdenti',
+                     'Tasso di Vincita',
+                     'P&L Totale', 'P&L Gain', 'P&L Loss',
+                     'P&L x Trade', 'Gain x Trade', 'Loss x Trade'],
+        'Total': [total_trades, winning_trades, losing_trades, f'{win_rate:.0f} %',
+                  pnl_totale, pnl_gain, pnl_loss, pnl_x_trade, gain_x_trade, loss_x_trade],
+        'Long': [total_trades_buy, winning_trades_buy, losing_trades_buy, f'{win_rate_buy:.0f} %',
+                 pnl_totale_buy, pnl_gain_buy, pnl_loss_buy, pnl_x_trade_buy, gain_x_trade_buy, loss_x_trade_buy],
+        'Short': [total_trades_sell, winning_trades_sell, losing_trades_sell, f'{win_rate_sell:.0f} %',
+                  pnl_totale_sell, pnl_gain_sell, pnl_loss_sell, pnl_x_trade_sell, gain_x_trade_sell, loss_x_trade_sell]
+    })
+
+    #print(risultati.to_string(index=False))
+
     
     # Metriche per operazioni long
     df_trades_long = filtra_operazioni(df, action='Buy', exit_open=False)
@@ -445,4 +633,5 @@ def calcola_metriche_trade(df):
                   short_pnl_totale, short_pnl_gain, short_pnl_loss]
     })
     
+
     return risultati
