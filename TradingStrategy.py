@@ -4,6 +4,8 @@ from utils import calculate_atr, calculate_sl_tp
 from Logger import Logger
 
 log = Logger("logfile.txt")
+
+
 class TradeResult:
     def __init__(self, action, entry_price, exit_price, return_value, return_percentage, date, exit_type,
                  exit_price_detail):
@@ -100,13 +102,14 @@ class TradeExecutor:
                 # Se siamo in posizione, controlliamo se è stato raggiunto Take Profit o Stop Loss
                 if self.position_manager.in_position:
                     log.print_and_log("------------------- POSIZIONE APERTA ----------------------------")
-                    log.print_and_log(f"La posizione è di tipo: { self.position_manager.position_type}")
+                    log.print_and_log(f"La posizione è di tipo: {self.position_manager.position_type}")
                     log.print_and_log(f"Entry: {self.entry_price}")
                     log.print_and_log(f"TP: {self.take_profit}")
                     log.print_and_log(f"SL: {self.stop_loss}")
-                    log.print_and_log(f"Actual: { row['Close']}")
+                    log.print_and_log(f"Actual: {row['Close']}")
                     # Controlla Take Profit
                     if self.position_manager.check_take_profit(row['Close'], self.take_profit):
+                    #if self.position_manager.check_TP(row, self.take_profit, False):
                         result = self.position_manager.close_position(row['Close'],
                                                                       self.take_profit,
                                                                       self.stop_loss,
@@ -118,6 +121,7 @@ class TradeExecutor:
                         self.trade_results.append(result)
                     # Controlla Stop Loss
                     elif self.position_manager.check_stop_loss(row['Close'], self.stop_loss):
+                    #elif self.position_manager.check_SL(row, self.stop_loss, False):
                         result = self.position_manager.close_position(row['Close'],
                                                                       self.take_profit,
                                                                       self.stop_loss,
@@ -195,6 +199,36 @@ class PositionManager:
             reason,
             close_price  # La colonna Exit_price è uguale al close_price
         )
+
+    def check_TP(self, row, take_profit, flag):
+        if flag:
+            Close_flag = self.check_take_profit(current_price=row['Close'],
+                                                take_profit=take_profit)
+            High_flag = self.check_take_profit(current_price=row['High'],
+                                               take_profit=take_profit)
+            Low_flag = self.check_take_profit(current_price=row['Low'],
+                                              take_profit=take_profit)
+            return Close_flag or High_flag or Low_flag
+        else:
+            return self.check_take_profit(current_price=row['Close'],
+                                          take_profit=take_profit)
+
+        return False
+
+    def check_SL(self, row, stop_loss, flag):
+        if flag:
+            Close_flag = self.check_stop_loss(current_price=row['Close'],
+                                              take_profit=stop_loss)
+            High_flag = self.check_stop_loss(current_price=row['High'],
+                                             take_profit=stop_loss)
+            Low_flag = self.check_stop_loss(current_price=row['Low'],
+                                            take_profit=stop_loss)
+            return Close_flag or High_flag or Low_flag
+        else:
+            return self.check_stop_loss(current_price=row['Close'],
+                                        take_profit=stop_loss)
+
+        return False
 
     def check_take_profit(self, current_price, take_profit):
         """

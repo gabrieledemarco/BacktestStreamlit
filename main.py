@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from strategy import MovingAverageCrossover, MeanReversion, IchimokuStrategy, ARIMAStrategy
 from backtest import Backtester
 from utils import calculate_metrics, plot_equity_curve, get_stock_symbols, plot_drawdown, \
-    calculate_return_metrics, plot_return_distribution, calcola_metriche_trade
+    calculate_return_metrics, plot_return_distribution, calcola_metriche_trade, calculate_historical_var
 
 import pandas as pd
 
@@ -118,11 +118,11 @@ try:
     # Fetch data
     # yf = YFinanceDownloader(symbol=symbol, start_date=start_date, end_date=end_date, interval=interval)
     # data = yf.download()
-    print("interval", interval)
+    #print("interval", interval)
     data = yfinance.download(tickers=symbol,
                              interval=interval, start=start_date, end=end_date)
-    print("----------DOWNLOADED TIME SERIES------------------------")
-    print(data)
+    #print("----------DOWNLOADED TIME SERIES------------------------")
+    #print(data)
     # Verifica e rinomina la colonna "Datetime" in "Date"
 
     if data.empty:
@@ -139,7 +139,21 @@ try:
         metrics = calculate_metrics(df_capital)
         stat_met = calculate_return_metrics(df_capital)
 
-        print(metrics)
+        var_df_unrl = calculate_historical_var(df_capital, 'Portfolio_Value', confidence_levels=[0.95, 0.99, 0.90])
+        var_df_real = calculate_historical_var(df_capital, 'Portfolio_Value_Real', confidence_levels=[0.95, 0.99, 0.90])
+        merged_var = pd.merge(var_df_unrl, var_df_real, on="Confidence Level", how="left")
+        merged_var = merged_var.rename(columns={
+            'VaR_x': 'Var Equity',  # Puoi anche cambiare il nome se necessario
+            'VaR_y': 'Var Portfolio'
+        })
+        merged_var['Var Equity'] = merged_var['Var Equity'] *100
+        merged_var['Var Portfolio'] = merged_var['Var Portfolio'] * 100
+        formatted_merged_var = merged_var.style.format({
+            'Var Equity': '{:.2f}%',  # Mostra come percentuale con 2 decimali
+            'Var Portfolio': '{:.2f}%'
+        })
+
+        #print(metrics)
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Annual Return", f"{metrics['annual_return']:.2f}%")
@@ -191,19 +205,22 @@ try:
         )
         st.dataframe(df_capital[
                          ['Action', 'Exit Type', 'Price', 'Close', 'Qty', 'PL_Realized', 'PL_Unrealized',
-                          'Position_Size', 'Free_Capital', 'Portfolio_Value','Portfolio_Value_Real', 'Capital_At_Leverage', 'strategy_returns',
+                          'Position_Size', 'Free_Capital', 'Portfolio_Value', 'Portfolio_Value_Real',
+                          'Capital_At_Leverage', 'strategy_returns',
                           'cumulative_returns']])
 
         st.subheader("Trading Returns")
         fig, ax = plot_return_distribution(df_capital)
         st.pyplot(fig)
 
-        print(df_capital.columns)
-        print("===================================")
-        print("=========METRICHE SUI TRADE========")
-        print("===================================")
+        #print(df_capital.columns)
+        #print("===================================")
+        #print("=========METRICHE SUI TRADE========")
+        #print("===================================")
         summary = calcola_metriche_trade(df_capital)
-        print("===================================")
+        #print("===================================")
         st.table(summary)
+
+        st.table(formatted_merged_var)
 except Exception as e:
     st.error(f"An error occurred: {str(e)}")

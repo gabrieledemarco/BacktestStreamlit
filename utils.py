@@ -34,6 +34,59 @@ def get_stock_symbols():
     return sorted(list(symbols), key=lambda x: x[0])
 
 
+def calculate_cagr_from_df(df):
+    # Assicurati che l'indice sia un datetime
+    df.index = pd.to_datetime(df.index)
+
+    # Prendi il valore iniziale (primo Close) e il valore finale (ultimo Close)
+    start_value = df['Portfolio_Value'].iloc[0]
+    end_value = df['Portfolio_Value'].iloc[-1]
+
+    # Calcolare la durata in minuti tra la data di inizio e quella finale
+    start_time = df.index[0]
+    end_time = df.index[-1]
+    duration_minutes = (end_time - start_time).total_seconds() / 60
+
+    # Calcolare il total return (rendimento complessivo)
+    total_return = (end_value - start_value) / start_value
+
+    # Calcolare il CAGR usando la formula con i minuti
+    cagr = (1 + total_return) ** (duration_minutes / 390) - 1
+
+    return cagr
+def calculate_historical_var(df, column, confidence_levels=[0.95, 0.99]):
+    """
+    Calcola il Value at Risk (VaR) utilizzando il metodo storico per più livelli di confidenza
+    e restituisce un DataFrame separato con i risultati del VaR.
+
+    :param df: DataFrame contenente i dati storici
+    :param column: Nome della colonna contenente i dati dei prezzi (ad esempio, 'Portfolio_Value' o 'Close')
+    :param confidence_levels: Lista dei livelli di confidenza per il VaR (default [95%, 99%])
+
+    :return: Un DataFrame contenente i risultati del VaR per ciascun livello di confidenza
+    """
+    # Calcolare i rendimenti giornalieri
+    df['returns'] = df[column].pct_change()
+
+    # Rimuovere eventuali valori NaN
+    df = df.dropna(subset=['returns'])
+
+    # Ordinare i rendimenti in ordine crescente
+    sorted_returns = df['returns'].sort_values()
+
+    # Calcolare il VaR per ciascun livello di confidenza
+    var_values = {}
+    for confidence_level in confidence_levels:
+        var_percentile = (1 - confidence_level) * 100
+        var = sorted_returns.quantile(var_percentile / 100)
+        var_values[f'{int(confidence_level * 100)}%'] = var
+
+    # Creiamo un DataFrame con i risultati del VaR
+    var_df = pd.DataFrame(list(var_values.items()), columns=['Confidence Level', 'VaR'])
+
+    # Restituiamo il DataFrame con i risultati del VaR
+    return var_df
+
 def calculate_metrics(results):
     """Calculate performance metrics"""
     # Calcolo dei rendimenti giornalieri della strategia
@@ -46,7 +99,7 @@ def calculate_metrics(results):
     total_days = len(results)
     total_return = (results['Portfolio_Value'].iloc[-1] / results['Portfolio_Value'].iloc[0]) - 1
     annual_return = ((1 + total_return) ** (252 / total_days) - 1) * 100
-
+    cagr_return = calculate_cagr_from_df(results)
     # Daily returns volatility
     daily_vol = results['strategy_returns'].std() * np.sqrt(252)
 
@@ -65,8 +118,16 @@ def calculate_metrics(results):
     winning_trades = trades[trades['strategy_returns'] > 0]
     win_rate = (len(winning_trades) / len(trades)) * 100 if len(trades) > 0 else 0
 
+    #print("STATISTICS")
+    #print({
+    #    'annual_return': cagr_return*100,
+    #    'sharpe_ratio': sharpe_ratio,
+    #    'max_drawdown': max_drawdown,
+    #à    'win_rate': win_rate,
+    #à    'volatility': daily_vol * 100
+    #})
     return {
-        'annual_return': annual_return,
+        'annual_return': cagr_return*100,
         'sharpe_ratio': sharpe_ratio,
         'max_drawdown': max_drawdown,
         'win_rate': win_rate,
@@ -157,12 +218,12 @@ def simulate_margin_trading(orders, price_history, initial_capital=10000, levera
     """
 
     # ✅ Convertiamo le date e uniamo gli ordini con i prezzi
-    print("--------------------Convertiamo le date e uniamo gli ordini con i prezzi--------------")
+    #print("--------------------Convertiamo le date e uniamo gli ordini con i prezzi--------------")
     orders['Date'] = pd.to_datetime(orders['Date'])
 
-    print(orders)
+    #print(orders)
     price_history = price_history.reset_index().rename(columns={'index': 'Date', 0: 'Close'})
-    print(price_history)
+    #print(price_history)
 
     if 'Datetime' in price_history.columns:
         price_history.rename(columns={'Datetime': 'Date'}, inplace=True)
@@ -397,27 +458,27 @@ def calculate_sl_tp(entry_price, atr_value, flag, risk_reward_ratio=2, ):
     """
     stop_loss = None
     take_profit = None
-    print("Compute TP/SL for:")
-    print("Entry: ", entry_price)
-    print("Flag: ",flag)
-    print("RR: ", risk_reward_ratio)
-    print("ATR: ", atr_value)
+    #print("Compute TP/SL for:")
+    #print("Entry: ", entry_price)
+    #print("Flag: ",flag)
+    #print("RR: ", risk_reward_ratio)
+    #print("ATR: ", atr_value)
 
     if flag == 'Buy':
-        print("-----flag is BUY------")
+        #print("-----flag is BUY------")
         stop_loss = atr_value/entry_price
         take_profit = (atr_value * risk_reward_ratio)/entry_price
-        print("ENTRY: ", entry_price)
-        print("TP: ", take_profit)
-        print("SL: ", stop_loss)
+        #print("ENTRY: ", entry_price)
+        #print("TP: ", take_profit)
+        #print("SL: ", stop_loss)
 
     if flag == 'Sell':
-        print("-----flag is Sell------")
+        #print("-----flag is Sell------")
         stop_loss =  atr_value/entry_price
         take_profit = (atr_value * risk_reward_ratio)/entry_price
-        print("ENTRY: ",entry_price)
-        print("TP: ",take_profit)
-        print("SL: ", stop_loss)
+        #print("ENTRY: ",entry_price)
+        #print("TP: ",take_profit)
+        #print("SL: ", stop_loss)
     return stop_loss, take_profit
 
 
@@ -513,5 +574,5 @@ def calcola_metriche_trade(df):
                   pnl_totale_sell, pnl_gain_sell, pnl_loss_sell, pnl_x_trade_sell, gain_x_trade_sell, loss_x_trade_sell]
     })
 
-    print(risultati.to_string(index=False))
+    #print(risultati.to_string(index=False))
     return risultati
