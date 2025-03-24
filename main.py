@@ -9,10 +9,10 @@ from utils import calculate_metrics, plot_equity_curve, get_stock_symbols, plot_
 
 import pandas as pd
 
-pd.reset_option('display.max_rows')
-pd.reset_option('display.max_columns')
-pd.reset_option('display.max_colwidth')
-pd.reset_option('display.expand_frame_repr')
+#pd.reset_option('display.max_rows')
+#pd.reset_option('display.max_columns')
+#pd.reset_option('display.max_colwidth')
+#pd.reset_option('display.expand_frame_repr')
 
 st.set_page_config(page_title="Trading Strategy Backtester", layout="wide")
 st.title("Trading Strategy Backtester")
