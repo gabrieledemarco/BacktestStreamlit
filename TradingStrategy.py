@@ -44,7 +44,7 @@ class TradeExecutor:
 
         if self.atr:
             data = calculate_atr(df=data)
-            log.print_and_log("CALCOLO ATR")
+            #log.print_and_log("CALCOLO ATR")
 
             # Rimuove le righe con NaN nella colonna "ATR"
             data = data.dropna(subset=["ATR"])
@@ -68,13 +68,13 @@ class TradeExecutor:
                                     'Open',
                                     np.nan))
                     if self.atr:
-                        log.print_and_log("__________________FLAG ATR ATTIVO______________________")
+                        #log.print_and_log("__________________FLAG ATR ATTIVO______________________")
                         [self.stop_loss, self.take_profit] = calculate_sl_tp(entry_price=self.entry_price,
                                                                              atr_value=row['ATR'],
                                                                              flag="Buy",
                                                                              risk_reward_ratio=self.RR)
-                        log.print_and_log(f"New TP: {self.take_profit}")
-                        log.print_and_log(f"New SL: {self.stop_loss}")
+                        #log.print_and_log(f"New TP: {self.take_profit}")
+                        #log.print_and_log(f"New SL: {self.stop_loss}")
 
                 # Apre una posizione 'Sell' se non siamo già in posizione
                 elif row['trade'] == -1 and not self.position_manager.in_position:  # Segnale di vendita (short)
@@ -91,22 +91,22 @@ class TradeExecutor:
                                     'Open',
                                     np.nan))
                     if self.atr:
-                        log.print_and_log("__________________FLAG ATR ATTIVO______________________")
+                        #log.print_and_log("__________________FLAG ATR ATTIVO______________________")
                         [self.stop_loss, self.take_profit] = calculate_sl_tp(entry_price=self.entry_price,
                                                                              atr_value=row['ATR'],
                                                                              flag="Sell",
                                                                              risk_reward_ratio=self.RR)
-                        log.print_and_log(f"New TP: {self.take_profit}")
-                        log.print_and_log(f"New SL: {self.stop_loss}")
+                        #log.print_and_log(f"New TP: {self.take_profit}")
+                        #log.print_and_log(f"New SL: {self.stop_loss}")
 
                 # Se siamo in posizione, controlliamo se è stato raggiunto Take Profit o Stop Loss
                 if self.position_manager.in_position:
-                    log.print_and_log("------------------- POSIZIONE APERTA ----------------------------")
-                    log.print_and_log(f"La posizione è di tipo: {self.position_manager.position_type}")
-                    log.print_and_log(f"Entry: {self.entry_price}")
-                    log.print_and_log(f"TP: {self.take_profit}")
-                    log.print_and_log(f"SL: {self.stop_loss}")
-                    log.print_and_log(f"Actual: {row['Close']}")
+                    #log.print_and_log("------------------- POSIZIONE APERTA ----------------------------")
+                    #log.print_and_log(f"La posizione è di tipo: {self.position_manager.position_type}")
+                    #log.print_and_log(f"Entry: {self.entry_price}")
+                    #log.print_and_log(f"TP: {self.take_profit}")
+                    #log.print_and_log(f"SL: {self.stop_loss}")
+                    #log.print_and_log(f"Actual: {row['Close']}")
                     # Controlla Take Profit
                     if self.position_manager.check_take_profit(row['Close'], self.take_profit):
                     #if self.position_manager.check_TP(row, self.take_profit, False):
@@ -235,16 +235,16 @@ class PositionManager:
         Verifica se è stato raggiunto il Take Profit.
         La logica cambia a seconda che la posizione sia long o short.
         """
-        log.print_and_log("Verifico raggiungiment take profit")
+        #log.print_and_log("Verifico raggiungiment take profit")
         if self.position_type == 'long':
-            log.print_and_log(f"Current Price is {current_price}")
-            log.print_and_log(f"Take profit is {self.entry_price * (1 + take_profit)}")
-            log.print_and_log(f"Take profit is taken {current_price >= self.entry_price * (1 + take_profit)}")
+            #log.print_and_log(f"Current Price is {current_price}")
+            #log.print_and_log(f"Take profit is {self.entry_price * (1 + take_profit)}")
+            #log.print_and_log(f"Take profit is taken {current_price >= self.entry_price * (1 + take_profit)}")
             return current_price >= self.entry_price * (1 + take_profit)
         elif self.position_type == 'short':
-            log.print_and_log(f"Current Price is {current_price}")
-            log.print_and_log(f"Take profit is {self.entry_price * (1 - take_profit)}")
-            log.print_and_log(f"Take profit is taken {current_price <= self.entry_price * (1 - take_profit)}")
+            #log.print_and_log(f"Current Price is {current_price}")
+            #log.print_and_log(f"Take profit is {self.entry_price * (1 - take_profit)}")
+            #log.print_and_log(f"Take profit is taken {current_price <= self.entry_price * (1 - take_profit)}")
             return current_price <= self.entry_price * (1 - take_profit)
         return False
 
@@ -254,16 +254,16 @@ class PositionManager:
         La logica cambia a seconda che la posizione sia long o short.
         """
         if self.position_type == 'long':
-            log.print_and_log(f"Current Price is {current_price}")
-            log.print_and_log(f"Stop Loss is {self.entry_price * (1 - stop_loss)}")
-            log.print_and_log(f"Stop Loss is taken {current_price <= self.entry_price * (1 - stop_loss)}")
+            #log.print_and_log(f"Current Price is {current_price}")
+            #log.print_and_log(f"Stop Loss is {self.entry_price * (1 - stop_loss)}")
+            #log.print_and_log(f"Stop Loss is taken {current_price <= self.entry_price * (1 - stop_loss)}")
             return current_price <= self.entry_price * (1 - stop_loss)
 
         elif self.position_type == 'short':
 
-            log.print_and_log(f"Current Price is {current_price}")
-            log.print_and_log(f"Stop Loss is {self.entry_price * (1 + stop_loss)}")
-            log.print_and_log(f"Stop Loss is taken {current_price >= self.entry_price * (1 + stop_loss)}")
+            #log.print_and_log(f"Current Price is {current_price}")
+            #log.print_and_log(f"Stop Loss is {self.entry_price * (1 + stop_loss)}")
+            #log.print_and_log(f"Stop Loss is taken {current_price >= self.entry_price * (1 + stop_loss)}")
             return current_price >= self.entry_price * (1 + stop_loss)
         return False
 
@@ -274,8 +274,8 @@ class TradeManager:
         self.take_profit = trade_params.get("Take Profit")
         self.stop_loss = trade_params.get("Stop Loss")
         self.executor = TradeExecutor(trade_params=trade_params)
-        log.print_and_log("-----------------APPLICAZIONE PARAMETRI GESTIONE RISCHIO ALLA STRATEGIA---------------")
-        log.print_and_log(str(trade_params))
+        #log.print_and_log("-----------------APPLICAZIONE PARAMETRI GESTIONE RISCHIO ALLA STRATEGIA---------------")
+        #log.print_and_log(str(trade_params))
 
     def run(self):
         return self.executor.apply_stop_loss_take_profit(self.data)
