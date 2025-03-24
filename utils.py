@@ -524,9 +524,8 @@ def calcola_tasso_vincita(winning_trades, total_trades):
     return (winning_trades / total_trades * 100) if total_trades > 0 else 0
 
 
-def calcola_pnl(df_trades):
-    """Calcola il P&L Totale, P&L Gain e P&L Loss."""
-=======def conta_operazioni(df_trades):
+    
+def conta_operazioni(df_trades):
     return df_trades.shape[0]
 
 def conta_operazioni_vincenti(df_trades):
