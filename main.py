@@ -110,11 +110,43 @@ with st.sidebar.container(border=1):
                                  q=q,
                                  trade_params=trade_params)
 
+
 with st.sidebar.container(border=1):
     initial_capital = st.number_input("Initial Capital ($)", value=1000.0)
-    leverage = st.slider("Levereage", 1, 100, 1)
-    posizion_size = st.text_input("Position Size", value=0.02)
-    posizion_size = float(posizion_size)
+    leverage = st.slider("Leverage", 1, 100, 1)
+    
+    method = st.selectbox(
+        "Select Position Sizing Method", 
+        ["Fixed Percentage", "Fixed Risk Per Trade", "ATR Based Sizing", "Max Drawdown Sizing", "Margin Exposure Sizing"]
+    )
+    
+    if method == "Fixed Percentage":
+        risk_pct = st.number_input("Risk Percentage", value=0.02, min_value=0.0, max_value=1.0)
+        margin_per_unit = st.number_input("Margin per Unit", value=50.0)
+    elif method == "Fixed Risk Per Trade":
+        risk_pct = st.number_input("Risk Percentage", value=0.02, min_value=0.0, max_value=1.0)
+        if not flag_atr:
+            stop_loss = st.number_input("Stop Loss", value=10.0)
+        stop_loss = st.number_input("Stop Loss", value=10.0)
+        value_per_unit = st.number_input("Value per Unit", value=100.0)
+    elif method == "ATR Based Sizing":
+        risk_pct = st.number_input("Risk Percentage", value=0.02, min_value=0.0, max_value=1.0)
+        atr = st.number_input("ATR", value=5.0)
+        value_per_unit = st.number_input("Value per Unit", value=100.0)
+    elif method == "Kelly Criterion":
+        win_rate = st.number_input("Win Rate", value=0.55, min_value=0.0, max_value=1.0)
+        risk_reward = st.number_input("Risk-Reward Ratio", value=2.0)
+    elif method == "Max Drawdown Sizing":
+        max_drawdown = st.number_input("Max Drawdown", value=5000.0)
+        current_drawdown = st.number_input("Current Drawdown", value=1000.0)
+    elif method == "Monte Carlo Sizing":
+        risk_pct = st.number_input("Risk Percentage", value=0.02, min_value=0.0, max_value=1.0)
+        num_simulations = st.number_input("Number of Simulations", value=10000, min_value=100, max_value=1000000)
+    elif method == "Margin Exposure Sizing":
+        margin_available = st.number_input("Margin Available", value=2000.0)
+        exposure_pct = st.number_input("Exposure Percentage", value=0.5, min_value=0.0, max_value=1.0)
+
+
 try:
     # Fetch data
     # yf = YFinanceDownloader(symbol=symbol, start_date=start_date, end_date=end_date, interval=interval)
