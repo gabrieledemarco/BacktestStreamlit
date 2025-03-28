@@ -320,8 +320,8 @@ def simulate_margin_trading(orders, price_history, initial_capital=10000, levera
 
 
 
-/*
-def simulate_margin_trading(orders, price_history, initial_capital=10000, leverage=2, risk_fraction=0.3):
+
+def simulate_margin_trading_old_version(orders, price_history, initial_capital=10000, leverage=2, risk_fraction=0.3):
     """
     Simula il trading con operazioni long e short a margine, investendo solo una frazione del capitale per trade.
 
@@ -421,7 +421,7 @@ def simulate_margin_trading(orders, price_history, initial_capital=10000, levera
         df.at[i, 'Free_Capital'] = free_capital
 
     return df
-    */
+    
 
 
 def simulate_portfolio(price_history, orders, initial_cash=10000, p=0.05):
