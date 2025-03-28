@@ -14,8 +14,8 @@ def calculate_strategy_returns(df):
 
 
 class Backtester:
-    def __init__(self, strategy, initial_capital, leverage, risk_fraction):
-        self.risk_fraction = risk_fraction
+    def __init__(self, strategy, initial_capital, leverage, method_params):
+        self.method_params = method_params  # ora prendiamo method_params
         self.leverage = leverage
         self.strategy = strategy
         self.initial_capital = initial_capital
@@ -30,11 +30,11 @@ class Backtester:
         #print(df)
 
         df_res = self.strategy.apply_stop_loss_take_profit()
-        #print("--------------------EVOLUAZIONE CAPITLE--------------")
+        #print("--------------------EVOLUZIONE CAPITALE--------------")
+        # Passiamo method_params a simulate_margin_trading
         df_capital = simulate_margin_trading(orders=df_res,
                                              price_history=data['Close'],
                                              initial_capital=self.initial_capital,
                                              leverage=self.leverage,
-                                             risk_fraction=self.risk_fraction)
+                                             method_params=self.method_params)  # passato method_params
         return df_res, df_capital
-
