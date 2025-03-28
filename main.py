@@ -133,18 +133,9 @@ with st.sidebar.container(border=1):
         risk_pct = st.number_input("Risk Percentage", value=0.02, min_value=0.0, max_value=1.0)
         atr = st.number_input("ATR", value=5.0)
         value_per_unit = st.number_input("Value per Unit", value=100.0)
-    elif method == "Kelly Criterion":
-        win_rate = st.number_input("Win Rate", value=0.55, min_value=0.0, max_value=1.0)
-        risk_reward = st.number_input("Risk-Reward Ratio", value=2.0)
     elif method == "Max Drawdown Sizing":
         max_drawdown = st.number_input("Max Drawdown", value=5000.0)
         current_drawdown = st.number_input("Current Drawdown", value=1000.0)
-    elif method == "Monte Carlo Sizing":
-        risk_pct = st.number_input("Risk Percentage", value=0.02, min_value=0.0, max_value=1.0)
-        num_simulations = st.number_input("Number of Simulations", value=10000, min_value=100, max_value=1000000)
-    elif method == "Margin Exposure Sizing":
-        margin_available = st.number_input("Margin Available", value=2000.0)
-        exposure_pct = st.number_input("Exposure Percentage", value=0.5, min_value=0.0, max_value=1.0)
 
 
 try:
