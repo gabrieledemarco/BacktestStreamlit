@@ -189,7 +189,7 @@ try:
         backtester = Backtester(strategy,
                                 initial_capital,
                                 leverage=leverage,
-                                risk_fraction=posizion_size)
+                                risk_fraction=method_params)
 
         [trade_results_df, df_capital] = backtester.run(data)
 
