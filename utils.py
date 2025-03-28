@@ -204,6 +204,123 @@ def plot_equity_curve(results):
     return fig
 
 
+def preprocess_data(orders, price_history):
+    orders['Date'] = pd.to_datetime(orders['Date'])
+    price_history = price_history.reset_index().rename(columns={'index': 'Date', 0: 'Close'})
+    if 'Datetime' in price_history.columns:
+        price_history.rename(columns={'Datetime': 'Date'}, inplace=True)
+    return price_history.merge(orders, on='Date', how='left')
+
+def initialize_columns(df, initial_capital, leverage):
+    df['Capital'] = initial_capital
+    df['PL_Realized'] = 0.0
+    df['PL_Unrealized'] = 0.0
+    df['Portfolio_Value'] = initial_capital
+    df['Portfolio_Value_Real'] = initial_capital
+    df['Capital_At_Leverage'] = initial_capital * leverage
+    df['Position_Size'] = 0.0
+    df['Open_Position'] = None
+    df['Entry_Price'] = 0.0
+    df['Qty'] = 0.0
+    df['Invested_Capital'] = 0.0
+    df['Free_Capital'] = initial_capital
+    return df
+
+def calculate_unrealized_pl(open_position, entry_price, price, qty):
+    if open_position:
+        return (price - entry_price) * qty if open_position == "Buy" else (entry_price - price) * qty
+    return 0
+
+def determine_position_size(method_params, capital, leverage, price):
+    if method_params.get('Fixed_Percentage', False):
+        risk_fraction = method_params['Fixed_Percentage_Params']['risk_fraction']
+        position_size = capital * leverage * risk_fraction
+    elif method_params.get('Fixed_Risk_Per_Trade', False):
+        risk_pct = method_params['Fixed_Risk_Per_Trade_Params']['risk_pct']
+        stop_loss = method_params['Fixed_Risk_Per_Trade_Params']['stop_loss']
+        value_per_unit = method_params['Fixed_Risk_Per_Trade_Params']['value_per_unit']
+        risk_amount = capital * risk_pct
+        position_size = risk_amount / (stop_loss * value_per_unit)
+    elif method_params.get('ATR_Based_Sizing', False):
+        risk_pct = method_params['ATR_Based_Sizing_Params']['risk_pct']
+        atr = method_params['ATR_Based_Sizing_Params']['atr']
+        value_per_unit = method_params['ATR_Based_Sizing_Params']['value_per_unit']
+        risk_amount = capital * risk_pct
+        position_size = risk_amount / (atr * value_per_unit)
+    elif method_params.get('Max_Drawdown_Sizing', False):
+        max_drawdown = method_params['Max_Drawdown_Sizing_Params']['max_drawdown']
+        current_drawdown = method_params['Max_Drawdown_Sizing_Params']['current_drawdown']
+        position_size = (max_drawdown - current_drawdown) / price
+    else:
+        raise ValueError("No valid position sizing method selected")
+    
+    qty = position_size / price
+    return position_size, qty
+
+def open_position_logic(row, capital, leverage, method_params):
+    position_size, qty = determine_position_size(method_params, capital, leverage, row['Close'])
+    return position_size, qty, row['Close'], "Buy" if row['Action'] == "Buy" else "Sell"
+
+def close_position_logic(row, open_position, entry_price, qty, capital):
+    realized_pl = (row['Exit Price'] - entry_price) * qty if open_position == "Buy" else (entry_price - row['Exit Price']) * qty
+    return capital + realized_pl, realized_pl
+
+def update_dataframe(df, i, capital, realized_pl, unrealized_pl, portfolio_value, portfolio_value_real, capital_at_leverage, position_size, open_position, entry_price, qty, invested_capital, free_capital):
+    df.at[i, 'Capital'] = capital
+    df.at[i, 'PL_Realized'] = realized_pl
+    df.at[i, 'PL_Unrealized'] = unrealized_pl
+    df.at[i, 'Portfolio_Value_Real'] = portfolio_value_real
+    df.at[i, 'Portfolio_Value'] = portfolio_value
+    df.at[i, 'Capital_At_Leverage'] = capital_at_leverage
+    df.at[i, 'Position_Size'] = position_size if open_position else 0
+    df.at[i, 'Open_Position'] = open_position
+    df.at[i, 'Entry_Price'] = entry_price
+    df.at[i, 'Qty'] = qty
+    df.at[i, 'Invested_Capital'] = invested_capital
+    df.at[i, 'Free_Capital'] = free_capital
+
+def simulate_margin_trading(orders, price_history, initial_capital=10000, leverage=2, method_params=None):
+    if method_params is None:
+        raise ValueError("method_params must be provided")
+    
+    df = preprocess_data(orders, price_history)
+    df = initialize_columns(df, initial_capital, leverage)
+    
+    capital = initial_capital
+    open_position = None
+    entry_price = 0
+    qty = 0
+    realized_pl = 0
+    invested_capital = 0
+
+    for i, row in df.iterrows():
+        price = row['Close']
+        exit_type = row['Exit Type']
+        
+        unrealized_pl = calculate_unrealized_pl(open_position, entry_price, price, qty)
+
+        if exit_type == "Open":
+            position_size, qty, entry_price, open_position = open_position_logic(row, capital, leverage, method_params)
+            invested_capital = position_size
+
+        elif exit_type in ["Stop Loss", "Take Profit", "Close"] and open_position:
+            capital, realized_pl = close_position_logic(row, open_position, entry_price, qty, capital)
+            open_position, qty, unrealized_pl, invested_capital = None, 0, 0, 0
+
+        portfolio_value = capital + unrealized_pl
+        portfolio_value_real = capital + realized_pl
+        capital_at_leverage = capital * leverage
+        free_capital = capital_at_leverage - invested_capital
+
+        update_dataframe(df, i, capital, realized_pl, unrealized_pl, portfolio_value, portfolio_value_real, capital_at_leverage, position_size, open_position, entry_price, qty, invested_capital, free_capital)
+    
+    return df
+
+
+
+
+
+/*
 def simulate_margin_trading(orders, price_history, initial_capital=10000, leverage=2, risk_fraction=0.3):
     """
     Simula il trading con operazioni long e short a margine, investendo solo una frazione del capitale per trade.
@@ -304,6 +421,7 @@ def simulate_margin_trading(orders, price_history, initial_capital=10000, levera
         df.at[i, 'Free_Capital'] = free_capital
 
     return df
+    */
 
 
 def simulate_portfolio(price_history, orders, initial_cash=10000, p=0.05):
