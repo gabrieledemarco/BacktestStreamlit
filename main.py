@@ -115,28 +115,61 @@ with st.sidebar.container(border=1):
     initial_capital = st.number_input("Initial Capital ($)", value=1000.0)
     leverage = st.slider("Leverage", 1, 100, 1)
     
-    method = st.selectbox(
-        "Select Position Sizing Method", 
-        ["Fixed Percentage", "Fixed Risk Per Trade", "ATR Based Sizing", "Max Drawdown Sizing", "Margin Exposure Sizing"]
-    )
+    method_params = {
+        "Fixed_Percentage": False,
+        "Fixed_Percentage_Params": {},
+        "Fixed_Amount": False,
+        "Fixed_Amount_Params": {},
+        "ATR_Based_Sizing": False,
+        "ATR_Based_Sizing_Params": {},
+        "Max_Drawdown_Sizing": False,
+        "Max_Drawdown_Sizing_Params": {}
+    }
+
+    # Selezione del metodo
+    method = st.selectbox("Select Position Sizing Method", 
+                          options=["Fixed Percentage", "Fixed Risk Per Trade", "ATR Based Sizing", "Max Drawdown Sizing"])
     
+    # Raccogliamo gli input in base al metodo selezionato
     if method == "Fixed Percentage":
         risk_pct = st.number_input("Risk Percentage", value=0.02, min_value=0.0, max_value=1.0)
         margin_per_unit = st.number_input("Margin per Unit", value=50.0)
+        method_params["Fixed_Percentage"] = True
+        method_params["Fixed_Percentage_Params"] = {
+            "risk_fraction": risk_pct,
+            "margin_per_unit": margin_per_unit
+        }
+
     elif method == "Fixed Risk Per Trade":
         risk_pct = st.number_input("Risk Percentage", value=0.02, min_value=0.0, max_value=1.0)
-        if not flag_atr:
-            stop_loss = st.number_input("Stop Loss", value=10.0)
         stop_loss = st.number_input("Stop Loss", value=10.0)
         value_per_unit = st.number_input("Value per Unit", value=100.0)
+        method_params["Fixed_Amount"] = True
+        method_params["Fixed_Amount_Params"] = {
+            "risk_fraction": risk_pct,
+            "stop_loss": stop_loss,
+            "value_per_unit": value_per_unit
+        }
+
     elif method == "ATR Based Sizing":
         risk_pct = st.number_input("Risk Percentage", value=0.02, min_value=0.0, max_value=1.0)
         atr = st.number_input("ATR", value=5.0)
         value_per_unit = st.number_input("Value per Unit", value=100.0)
+        method_params["ATR_Based_Sizing"] = True
+        method_params["ATR_Based_Sizing_Params"] = {
+            "risk_fraction": risk_pct,
+            "atr": atr,
+            "value_per_unit": value_per_unit
+        }
+
     elif method == "Max Drawdown Sizing":
         max_drawdown = st.number_input("Max Drawdown", value=5000.0)
         current_drawdown = st.number_input("Current Drawdown", value=1000.0)
-
+        method_params["Max_Drawdown_Sizing"] = True
+        method_params["Max_Drawdown_Sizing_Params"] = {
+            "max_drawdown": max_drawdown,
+            "current_drawdown": current_drawdown
+        }
 
 try:
     # Fetch data
